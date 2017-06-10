@@ -31,8 +31,8 @@ public class Server {
 //    }
 
     public static void main(String[] args) throws InterruptedException {
-//        initProperties();
-//        printInput(args);
+        initProperties();
+        printInput(args);
 
         String schema = args[0];
         String table = args[1];
@@ -76,11 +76,11 @@ public class Server {
     /**
      * 初始化系统属性
      */
-//    private static void initProperties() {
-//        System.setProperty("middleware.test.home", Constants.TESTER_HOME);
-//        System.setProperty("middleware.teamcode", Constants.TEAMCODE);
-//        System.setProperty("app.logging.level", Constants.LOG_LEVEL);
-//    }
+    private static void initProperties() {
+        System.setProperty("middleware.test.home", Constants.TESTER_HOME);
+        System.setProperty("middleware.teamcode", Constants.TEAMCODE);
+        System.setProperty("app.logging.level", Constants.LOG_LEVEL);
+    }
 
 
     private void startServer(int port) throws InterruptedException {
