@@ -1,15 +1,15 @@
 package com.alibaba.middleware.race.sync;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 服务器类，负责push消息到client Created by wanshao on 2017/5/25.
@@ -17,10 +17,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Server {
 
     // 保存channel
-    private static Map<String, Channel> map = new ConcurrentHashMap<String, Channel>();
-    // 接收评测程序的三个参数
-    private static String schema;
-    private static Map tableNamePkMap;
+//    private static Map<String, Channel> map = new ConcurrentHashMap<String, Channel>();
+//    // 接收评测程序的三个参数
+//    private static String schema;
+//    private static Map tableNamePkMap;
 
 //    public static Map<String, Channel> getMap() {
 //        return map;
@@ -41,8 +41,14 @@ public class Server {
 
         Logger logger = LoggerFactory.getLogger(Client.class);
 
+
+        Server server = new Server();
+        logger.info("com.alibaba.middleware.race.sync.Server is running....");
+        server.startServer(5527);
+
         logger.info("start fileParser...");
         FileParser fileParser = new FileParser(schema,table,start,end);
+
         for (int i = 1; i <= 10; i++) {
             fileParser.readPage((byte) i);
             logger.info("fileParser has read " + i);
@@ -51,9 +57,7 @@ public class Server {
         fileParser.showResult();
         logger.info("file has been written...");
 
-        Server server = new Server();
-        logger.info("com.alibaba.middleware.race.sync.Server is running....");
-        server.startServer(5527);
+
     }
 
     /**
