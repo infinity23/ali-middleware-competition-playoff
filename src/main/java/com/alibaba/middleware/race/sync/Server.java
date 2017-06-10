@@ -15,6 +15,10 @@ import org.slf4j.LoggerFactory;
  * 服务器类，负责push消息到client Created by wanshao on 2017/5/25.
  */
 public class Server {
+    private static String schema;
+    private static String table;
+    private static int start;
+    private static int end;
 
     // 保存channel
 //    private static Map<String, Channel> map = new ConcurrentHashMap<String, Channel>();
@@ -30,14 +34,16 @@ public class Server {
 //        Server.map = map;
 //    }
 
+
+
     public static void main(String[] args) throws InterruptedException {
         initProperties();
         printInput(args);
 
-        String schema = args[0];
-        String table = args[1];
-        int start = Integer.parseInt(args[2]);
-        int end = Integer.parseInt(args[3]);
+        schema = args[0];
+        table = args[1];
+        start = Integer.parseInt(args[2]);
+        end = Integer.parseInt(args[3]);
 
         Logger logger = LoggerFactory.getLogger(Client.class);
 
@@ -46,16 +52,6 @@ public class Server {
         logger.info("com.alibaba.middleware.race.sync.Server is running....");
         server.startServer(5527);
 
-        logger.info("start fileParser...");
-        FileParser fileParser = new FileParser(schema,table,start,end);
-
-        for (int i = 1; i <= 10; i++) {
-            fileParser.readPage((byte) i);
-            logger.info("fileParser has read " + i);
-        }
-        logger.info("start showResult...");
-        fileParser.showResult();
-        logger.info("file has been written...");
 
 
     }
@@ -99,7 +95,7 @@ public class Server {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         // 注册handler
-                        ch.pipeline().addLast(new ServerDemoInHandler());
+                        ch.pipeline().addLast(new ServerDemoInHandler(schema, table, start, end));
                         // ch.pipeline().addLast(new ServerDemoOutHandler());
                     }
                 })

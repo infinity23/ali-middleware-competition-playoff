@@ -14,6 +14,18 @@ import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
  */
 public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
+    private String schema;
+    private String table;
+    private int lo;
+    private int hi;
+
+    public ServerDemoInHandler(String schema, String table, int lo, int hi) {
+        this.schema = schema;
+        this.table = table;
+        this.lo = lo;
+        this.hi = hi;
+    }
+
     private static Logger logger = LoggerFactory.getLogger(ServerDemoInHandler.class);
 
     /**
@@ -32,6 +44,19 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+
+
+        logger.info("start fileParser...");
+        FileParser fileParser = new FileParser(schema,table,lo,hi);
+
+        for (int i = 1; i <= 10; i++) {
+            fileParser.readPage((byte) i);
+            logger.info("fileParser has read " + i);
+        }
+        logger.info("start showResult...");
+        fileParser.showResult();
+        logger.info("file has been written...");
+
 
         String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
         FileChannel fileChannel = new RandomAccessFile(fileName, "r").getChannel();
