@@ -1,20 +1,15 @@
 package com.alibaba.middleware.race.sync;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 服务器类，负责push消息到client Created by wanshao on 2017/5/25.
@@ -27,21 +22,37 @@ public class Server {
     private static String schema;
     private static Map tableNamePkMap;
 
-    public static Map<String, Channel> getMap() {
-        return map;
-    }
-
-    public static void setMap(Map<String, Channel> map) {
-        Server.map = map;
-    }
+//    public static Map<String, Channel> getMap() {
+//        return map;
+//    }
+//
+//    public static void setMap(Map<String, Channel> map) {
+//        Server.map = map;
+//    }
 
     public static void main(String[] args) throws InterruptedException {
-        initProperties();
-        printInput(args);
+//        initProperties();
+//        printInput(args);
+
+        String schema = args[0];
+        String table = args[1];
+        int start = Integer.parseInt(args[2]);
+        int end = Integer.parseInt(args[3]);
+
         Logger logger = LoggerFactory.getLogger(Client.class);
+
+        logger.info("start fileParser...");
+        FileParser fileParser = new FileParser(schema,table,start,end);
+        for (int i = 1; i <= 10; i++) {
+            fileParser.readPage((byte) i);
+            logger.info("fileParser has read " + i);
+        }
+        logger.info("start showResult...");
+        fileParser.showResult();
+        logger.info("file has been written...");
+
         Server server = new Server();
         logger.info("com.alibaba.middleware.race.sync.Server is running....");
-
         server.startServer(5527);
     }
 
@@ -65,11 +76,11 @@ public class Server {
     /**
      * 初始化系统属性
      */
-    private static void initProperties() {
-        System.setProperty("middleware.test.home", Constants.TESTER_HOME);
-        System.setProperty("middleware.teamcode", Constants.TEAMCODE);
-        System.setProperty("app.logging.level", Constants.LOG_LEVEL);
-    }
+//    private static void initProperties() {
+//        System.setProperty("middleware.test.home", Constants.TESTER_HOME);
+//        System.setProperty("middleware.teamcode", Constants.TEAMCODE);
+//        System.setProperty("app.logging.level", Constants.LOG_LEVEL);
+//    }
 
 
     private void startServer(int port) throws InterruptedException {
