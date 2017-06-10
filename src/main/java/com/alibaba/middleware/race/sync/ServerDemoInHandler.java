@@ -67,7 +67,13 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
     }
 
-//    @Override
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        logger.error(cause.getMessage());
+    }
+
+
+    //    @Override
 //    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 //
 //        // 保存channel
