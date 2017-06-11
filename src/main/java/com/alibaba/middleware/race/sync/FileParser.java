@@ -1,5 +1,8 @@
 package com.alibaba.middleware.race.sync;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -15,6 +18,8 @@ public class FileParser {
     private HashMap<Integer, Record> indexMap = new HashMap<>();
     private int lo;
     private int hi;
+
+    private static Logger logger = LoggerFactory.getLogger(FileParser.class);
 
     public FileParser(String schema, String table, int lo, int hi) {
         this.schema = schema;
@@ -169,9 +174,8 @@ public class FileParser {
                 stringBuilder.append('\n');
                 fileWriter.write(stringBuilder.toString());
 
-
                 //测试用
-                System.out.println(stringBuilder.toString());
+                logger.info(stringBuilder.toString());
 
                 stringBuilder.delete(0, stringBuilder.length());
 

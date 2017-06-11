@@ -20,6 +20,8 @@ public class Server {
     private static int start;
     private static int end;
 
+    private static Logger logger = LoggerFactory.getLogger(Client.class);
+
     // 保存channel
 //    private static Map<String, Channel> map = new ConcurrentHashMap<String, Channel>();
 //    // 接收评测程序的三个参数
@@ -45,8 +47,6 @@ public class Server {
         start = Integer.parseInt(args[2]);
         end = Integer.parseInt(args[3]);
 
-        Logger logger = LoggerFactory.getLogger(Client.class);
-
 
         Server server = new Server();
         logger.info("com.alibaba.middleware.race.sync.Server is running....");
@@ -63,13 +63,13 @@ public class Server {
      */
     private static void printInput(String[] args) {
         // 第一个参数是Schema Name
-        System.out.println("Schema:" + args[0]);
+        logger.info("Schema:" + args[0]);
         // 第二个参数是Schema Name
-        System.out.println("table:" + args[1]);
+        logger.info("table:" + args[1]);
         // 第三个参数是start pk Id
-        System.out.println("start:" + args[2]);
+        logger.info("start:" + args[2]);
         // 第四个参数是end pk Id
-        System.out.println("end:" + args[3]);
+        logger.info("end:" + args[3]);
 
     }
 
