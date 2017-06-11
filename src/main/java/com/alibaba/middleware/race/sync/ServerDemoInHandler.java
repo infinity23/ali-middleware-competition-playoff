@@ -45,7 +45,6 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
 
-
         logger.info("start fileParser...");
         FileParser fileParser = new FileParser(schema,table,lo,hi);
 
@@ -59,7 +58,8 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
 
         String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
-        FileChannel fileChannel = new RandomAccessFile(fileName, "r").getChannel();
+        RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
+        FileChannel fileChannel = randomAccessFile.getChannel();
         FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
 
         final ChannelFuture future = ctx.writeAndFlush(fileRegion);

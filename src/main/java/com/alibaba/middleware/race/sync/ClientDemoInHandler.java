@@ -26,8 +26,11 @@ public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
         ByteBuf buf = (ByteBuf) msg;
         String fileName = RESULT_HOME + RESULT_FILE_NAME;
-        FileChannel fileChannel = new RandomAccessFile(fileName,"rw").getChannel();
-        fileChannel.read(buf.nioBuffer());
+        RandomAccessFile randomAccessFile = new RandomAccessFile(fileName,"rw");
+        FileChannel fileChannel = randomAccessFile.getChannel();
+        fileChannel.write(buf.nioBuffer());
+
+        fileChannel.close();
 
         ctx.close();
         buf.release();

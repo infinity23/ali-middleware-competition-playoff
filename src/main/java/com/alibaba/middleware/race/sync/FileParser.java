@@ -10,18 +10,11 @@ import java.util.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
 public class FileParser {
-//    private String path = "D:\\IncrementalSync\\data\\";
-//    private String path = "E:\\Major\\IncrementalSync\\example\\";
-    private String path = DATA_HOME;
-    private String resultPath = MIDDLE_HOME;
-    //    private String fileName = "/canal.txt";
-//    private byte fileName = 1;
     private String schema;
     private String table ;
     private HashMap<Integer, Record> indexMap = new HashMap<>();
     private int lo;
     private int hi;
-    private String resultName = RESULT_FILE_NAME;
 
     public FileParser(String schema, String table, int lo, int hi) {
         this.schema = schema;
@@ -39,7 +32,7 @@ public class FileParser {
 //            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
 
-            FileChannel fileChannel = new RandomAccessFile(path + fileName + ".txt", "r").getChannel();
+            FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
             MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
 
             int position;
@@ -99,9 +92,33 @@ public class FileParser {
     }
 
 
+    private String[] readDate(byte fileName, int filePoint, int fileLen) {
+
+        if (!mappedByteBufferHashMap.containsKey(fileName)) {
+            try {
+                FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
+                mappedByteBufferHashMap.put(fileName, fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
+
+        mappedByteBuffer.position(filePoint);
+        byte[] bytes = new byte[fileLen];
+        mappedByteBuffer.get(bytes);
+
+        String s = new String(bytes, Constants.CHARSET);
+
+        return s.substring(1, s.length() - 1).split("\\|");
+
+    }
+
+
+
     public void showResult() {
         try {
-            FileWriter fileWriter = new FileWriter(resultPath + resultName);
+            FileWriter fileWriter = new FileWriter(MIDDLE_HOME + RESULT_FILE_NAME);
 
             StringBuilder stringBuilder = new StringBuilder();
 
@@ -154,26 +171,6 @@ public class FileParser {
         }
     }
 
-    private String[] readDate(byte fileName, int filePoint, int fileLen) {
 
-        if (!mappedByteBufferHashMap.containsKey(fileName)) {
-            try {
-                FileChannel fileChannel = new RandomAccessFile(path + fileName + ".txt", "r").getChannel();
-                mappedByteBufferHashMap.put(fileName, fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
-
-        mappedByteBuffer.position(filePoint);
-        byte[] bytes = new byte[fileLen];
-        mappedByteBuffer.get(bytes);
-
-        String s = new String(bytes, Constants.CHARSET);
-
-        return s.substring(1, s.length() - 1).split("\\|");
-
-    }
 
 }
