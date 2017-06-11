@@ -11,9 +11,6 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * 服务器类，负责push消息到client Created by wanshao on 2017/5/25.
- */
 public class Server {
     private static String schema;
     private static String table;
