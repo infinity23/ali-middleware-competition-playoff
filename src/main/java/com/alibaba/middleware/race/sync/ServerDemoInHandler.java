@@ -54,7 +54,7 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
         }
         logger.info("start showResult...");
         fileParser.showResult();
-        logger.info("file has been written...");
+        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
 
 
         String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;

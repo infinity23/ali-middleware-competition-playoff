@@ -22,13 +22,17 @@ public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        logger.info("com.alibaba.middleware.race.sync.ClientDemoInHandler.channelRead");
+        logger.info("write to " + RESULT_HOME + RESULT_FILE_NAME);
 
         ByteBuf buf = (ByteBuf) msg;
         String fileName = RESULT_HOME + RESULT_FILE_NAME;
         RandomAccessFile randomAccessFile = new RandomAccessFile(fileName,"rw");
         FileChannel fileChannel = randomAccessFile.getChannel();
         fileChannel.write(buf.nioBuffer());
+
+        System.out.print(buf.readCharSequence((int) randomAccessFile.length(),Constants.CHARSET));
+
+
 
         fileChannel.close();
 

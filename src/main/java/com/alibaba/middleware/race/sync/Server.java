@@ -45,7 +45,7 @@ public class Server {
         start = Integer.parseInt(args[2]);
         end = Integer.parseInt(args[3]);
 
-        Logger logger = LoggerFactory.getLogger(Client.class);
+        Logger logger = LoggerFactory.getLogger(Server.class);
 
 
         Server server = new Server();
