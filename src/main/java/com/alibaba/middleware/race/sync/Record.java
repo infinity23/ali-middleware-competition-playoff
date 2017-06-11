@@ -6,7 +6,7 @@ public class Record {
     private byte insertFileName;
     private int insertFilePosition;
     private int insertFileLen;
-    private HashMap<Integer, UpdateRecord> update = new HashMap<>();
+    private HashMap<String, UpdateRecord> update = new HashMap<>();
 
     public Record(byte insertFileName, int insertFilePosition, int insertFileLen) {
         this.insertFileName = insertFileName;
@@ -15,7 +15,7 @@ public class Record {
     }
 
 
-    public HashMap<Integer, UpdateRecord> getUpdate() {
+    public HashMap<String, UpdateRecord> getUpdate() {
         return update;
     }
 
@@ -36,7 +36,8 @@ public class Record {
 //    }
 
     public void addUpdate(String name, int fileName, int filePosition, int fileLen) {
-        update.put(name.hashCode(), new UpdateRecord((byte) fileName, filePosition, fileLen));
+//        update.put(name.hashCode(), new UpdateRecord((byte) fileName, filePosition, fileLen));
+        update.put(name, new UpdateRecord((byte) fileName, filePosition, fileLen));
     }
 }
 

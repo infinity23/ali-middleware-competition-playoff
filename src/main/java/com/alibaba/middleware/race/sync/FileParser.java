@@ -34,6 +34,7 @@ public class FileParser {
 
             FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
             MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
+            mappedByteBufferHashMap.put(fileName,mappedByteBuffer);
 
             int position;
             int end;
@@ -94,14 +95,6 @@ public class FileParser {
 
     private String[] readDate(byte fileName, int filePoint, int fileLen) {
 
-        if (!mappedByteBufferHashMap.containsKey(fileName)) {
-            try {
-                FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
-                mappedByteBufferHashMap.put(fileName, fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
         MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
 
         mappedByteBuffer.position(filePoint);
@@ -145,7 +138,7 @@ public class FileParser {
                     j += 2;
                 }
 
-                HashMap<Integer, UpdateRecord> update = record.getUpdate();
+                HashMap<String, UpdateRecord> update = record.getUpdate();
                 for (UpdateRecord updateRecord : update.values()) {
                     fileName = updateRecord.getUpdateFileName();
                     filePoint = updateRecord.getUpdateFilePosition();
