@@ -62,6 +62,7 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
         FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
 
         final ChannelFuture future = ctx.writeAndFlush(fileRegion);
+
         future.addListener(ChannelFutureListener.CLOSE);
 
     }

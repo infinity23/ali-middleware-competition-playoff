@@ -168,7 +168,13 @@ public class FileParser {
                 }
                 stringBuilder.append('\n');
                 fileWriter.write(stringBuilder.toString());
+
+
+                //测试用
+                System.out.println(stringBuilder.toString());
+
                 stringBuilder.delete(0, stringBuilder.length());
+
             }
             fileWriter.close();
         } catch (IOException e) {
