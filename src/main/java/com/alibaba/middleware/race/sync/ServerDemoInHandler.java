@@ -56,7 +56,6 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
         fileParser.showResult();
         logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
 
-
         String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
         RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
         FileChannel fileChannel = randomAccessFile.getChannel();
