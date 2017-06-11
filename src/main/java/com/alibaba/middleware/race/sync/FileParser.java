@@ -64,18 +64,20 @@ public class FileParser {
                     indexMap.put(pk, new Record(fileName, position, fileLen));
                 } else if (operation == 'U') {
                     pk = Integer.parseInt(ss[6]);
+                    //处理主键变更
                     if (!ss[6].equals(ss[7])) {
                         int newPK = Integer.parseInt(ss[7]);
                         indexMap.put(newPK, indexMap.get(pk));
                         indexMap.remove(pk);
-                        if (ss.length != 8) {
-                            String name = parseName(ss[8]);
-                            indexMap.get(newPK).addUpdate(name, fileName, position, fileLen);
-                        }
-                        continue;
+                        pk = newPK;
                     }
-                    String name = parseName(ss[8]);
-                    indexMap.get(pk).addUpdate(name, fileName, position, fileLen);
+
+                    for (int j = 8; j < ss.length - 2; j++) {
+                        String name = parseName(ss[j]);
+                        indexMap.get(pk).addUpdate(name, fileName, position, fileLen);
+                        j += 2;
+                    }
+
                 } else {
                     pk = Integer.parseInt(ss[6]);
                     indexMap.remove(pk);
@@ -139,14 +141,24 @@ public class FileParser {
                 }
 
                 HashMap<String, UpdateRecord> update = record.getUpdate();
-                for (UpdateRecord updateRecord : update.values()) {
+                for (Map.Entry<String, UpdateRecord> entry : update.entrySet()) {
+                    String key = entry.getKey();
+                    UpdateRecord updateRecord = entry.getValue();
                     fileName = updateRecord.getUpdateFileName();
                     filePoint = updateRecord.getUpdateFilePosition();
                     fileLen = updateRecord.getUpdateFileLen();
                     ss = readDate(fileName, filePoint, fileLen);
-                    String name = parseName(ss[8]);
-                    String value = ss[10];
-                    map.put(name, value);
+
+                    for (int j = 8; j < ss.length - 2; j++) {
+                        String name = parseName(ss[j]);
+                        if(key.equals(name)){
+                            String value = ss[j + 2];
+                            map.put(name, value);
+                            break;
+                        }
+                        j += 2;
+                    }
+
                 }
 
                 stringBuilder.append(pk);

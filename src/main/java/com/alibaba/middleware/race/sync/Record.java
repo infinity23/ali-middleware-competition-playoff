@@ -36,7 +36,6 @@ public class Record {
 //    }
 
     public void addUpdate(String name, int fileName, int filePosition, int fileLen) {
-//        update.put(name.hashCode(), new UpdateRecord((byte) fileName, filePosition, fileLen));
         update.put(name, new UpdateRecord((byte) fileName, filePosition, fileLen));
     }
 }
