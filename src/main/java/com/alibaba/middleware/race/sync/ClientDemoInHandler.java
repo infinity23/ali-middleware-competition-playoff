@@ -12,24 +12,22 @@ import java.nio.channels.FileChannel;
 import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
 import static com.alibaba.middleware.race.sync.Constants.RESULT_HOME;
 
-/**
- * Created by wanshao on 2017/5/25.
- */
 public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        ByteBuf buf = (ByteBuf) msg;
         Logger logger = LoggerFactory.getLogger(ClientDemoInHandler.class);
 
         logger.info("write to " + RESULT_HOME + RESULT_FILE_NAME);
 
-        ByteBuf buf = (ByteBuf) msg;
         String fileName = RESULT_HOME + RESULT_FILE_NAME;
-        RandomAccessFile randomAccessFile = new RandomAccessFile(fileName,"rw");
+        RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "rw");
         FileChannel fileChannel = randomAccessFile.getChannel();
         fileChannel.write(buf.nioBuffer());
 
+        //测试输出信息
         System.out.print(buf.readCharSequence((int) randomAccessFile.length(), Constants.CHARSET));
 
         fileChannel.close();

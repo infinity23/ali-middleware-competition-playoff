@@ -1,21 +1,25 @@
 package com.alibaba.middleware.race.sync;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+
+import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
+
 public class Server {
     private static String schema;
     private static String table;
     private static int start;
     private static int end;
+    static Channel channel;
 
 
     // 保存channel
@@ -48,7 +52,6 @@ public class Server {
         Server server = new Server();
         logger.info("com.alibaba.middleware.race.sync.Server is running....");
         server.startServer(5527);
-
 
 
     }
@@ -92,7 +95,6 @@ public class Server {
             b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
-
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         // 注册handler
@@ -105,10 +107,49 @@ public class Server {
 
             ChannelFuture f = b.bind(port).sync();
 
+            parseFile();
+            writeFile();
+
             f.channel().closeFuture().sync();
+
+
+
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
         }
     }
+
+    private void parseFile(){
+        Logger logger = LoggerFactory.getLogger(Server.class);
+
+        logger.info("start fileParser...");
+        FileParser fileParser = new FileParser(schema,table,start,end);
+
+        for (int i = 1; i <= 10; i++) {
+            fileParser.readPage((byte) i);
+            logger.info("fileParser has read " + i);
+        }
+        logger.info("start showResult...");
+        fileParser.showResult();
+        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
+    }
+
+    private void writeFile(){
+        Logger logger = LoggerFactory.getLogger(Server.class);
+        try {
+            String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
+            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
+            FileChannel fileChannel = randomAccessFile.getChannel();
+            FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
+
+//            final ChannelFuture future = ctx.writeAndFlush(fileRegion);
+            final ChannelFuture future = channel.writeAndFlush(fileRegion);
+
+            future.addListener(ChannelFutureListener.CLOSE);
+        }catch (IOException e){
+            logger.error("writeFile error",e);
+        }
+    }
+
 }

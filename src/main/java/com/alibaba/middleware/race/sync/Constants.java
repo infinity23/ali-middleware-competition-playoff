@@ -2,9 +2,6 @@ package com.alibaba.middleware.race.sync;
 
 import java.nio.charset.Charset;
 
-/**
- * 外部赛示例代码需要的常量 Created by wanshao on 2017/5/25.
- */
 interface Constants {
 
     Charset CHARSET = Charset.forName("UTF-8");
@@ -13,7 +10,7 @@ interface Constants {
 
     // ------------ 本地测试可以使用自己的路径--------------//
 
-    ////     工作主目录
+//    //     工作主目录
 //     String TESTER_HOME = "E:\\Major\\IncrementalSync\\example";
 ////     赛题数据
 //    String DATA_HOME = "E:\\Major\\IncrementalSync\\example\\";
@@ -21,7 +18,8 @@ interface Constants {
 //    String RESULT_HOME = "E:\\Major\\IncrementalSync\\example\\result\\";
 //    // 中间结果目录
 //    String MIDDLE_HOME = "E:\\Major\\IncrementalSync\\example\\middle\\";
-//     工作主目录
+
+////     工作主目录
 //    String TESTER_HOME = "D:\\IncrementalSync\\data";
 //    //     赛题数据
 //    String DATA_HOME = "D:\\IncrementalSync\\data\\";
