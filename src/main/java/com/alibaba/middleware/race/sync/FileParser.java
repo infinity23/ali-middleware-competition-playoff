@@ -25,6 +25,9 @@ public class FileParser {
         this.table = table;
         this.lo = lo;
         this.hi = hi;
+
+        System.getProperties().put("file.encoding", "UTF-8");
+        System.getProperties().put("file.decoding", "UTF-8");
     }
 
     private HashMap<Byte, MappedByteBuffer> mappedByteBufferHashMap = new HashMap<>(10);
@@ -53,7 +56,7 @@ public class FileParser {
                 byte[] bytes = new byte[fileLen];
                 mappedByteBuffer.reset();
                 mappedByteBuffer.get(bytes, 0, bytes.length);
-                String s = new String(bytes, Constants.CHARSET);
+                String s = new String(bytes);
                 String[] ss = s.substring(1, s.length() - 1).split("\\|");
 
                 //检测库表
@@ -107,7 +110,7 @@ public class FileParser {
         byte[] bytes = new byte[fileLen];
         mappedByteBuffer.get(bytes);
 
-        String s = new String(bytes, Constants.CHARSET);
+        String s = new String(bytes);
 
         return s.substring(1, s.length() - 1).split("\\|");
 
@@ -185,6 +188,7 @@ public class FileParser {
 
                 //测试用
                 Logger logger = LoggerFactory.getLogger(Server.class);
+                stringBuilder.delete(stringBuilder.length() - 1, stringBuilder.length());
                 logger.info(stringBuilder.toString());
 
                 stringBuilder.delete(0, stringBuilder.length());
