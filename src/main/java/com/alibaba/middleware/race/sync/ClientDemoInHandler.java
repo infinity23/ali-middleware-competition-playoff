@@ -32,7 +32,6 @@ public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
         System.out.print(buf.readCharSequence((int) randomAccessFile.length(), Constants.CHARSET));
 
-
         fileChannel.close();
 
         ctx.close();
