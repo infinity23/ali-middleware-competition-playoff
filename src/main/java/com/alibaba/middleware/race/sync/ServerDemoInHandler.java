@@ -26,8 +26,6 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
         this.hi = hi;
     }
 
-    private static Logger logger = LoggerFactory.getLogger(ServerDemoInHandler.class);
-
     /**
      * 根据channel
      *
@@ -44,6 +42,8 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+
+        Logger logger = LoggerFactory.getLogger(Server.class);
 
         logger.info("start fileParser...");
         FileParser fileParser = new FileParser(schema,table,lo,hi);
@@ -69,6 +69,7 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        Logger logger = LoggerFactory.getLogger(Server.class);
         logger.error(cause.getMessage());
     }
 

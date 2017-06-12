@@ -11,19 +11,17 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by wanshao on 2017/5/25.
- */
 public class Client {
 
     private final static int port = Constants.SERVER_PORT;
     // idle时间
     private static String ip;
     private EventLoopGroup loop = new NioEventLoopGroup();
+    private static Logger logger = LoggerFactory.getLogger(Client.class);
+
 
     public static void main(String[] args) throws Exception {
         initProperties();
-        Logger logger = LoggerFactory.getLogger(Client.class);
         // 从args获取server端的ip
         ip = args[0];
         Client client = new Client();
@@ -38,6 +36,7 @@ public class Client {
         System.setProperty("middleware.test.home", Constants.TESTER_HOME);
         System.setProperty("middleware.teamcode", Constants.TEAMCODE);
         System.setProperty("app.logging.level", Constants.LOG_LEVEL);
+        System.setProperty("log.name", "client-custom");
     }
 
     /**

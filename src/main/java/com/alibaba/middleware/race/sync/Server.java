@@ -17,7 +17,6 @@ public class Server {
     private static int start;
     private static int end;
 
-    private static Logger logger = LoggerFactory.getLogger(Client.class);
 
     // 保存channel
 //    private static Map<String, Channel> map = new ConcurrentHashMap<String, Channel>();
@@ -44,6 +43,7 @@ public class Server {
         start = Integer.parseInt(args[2]);
         end = Integer.parseInt(args[3]);
 
+        Logger logger = LoggerFactory.getLogger(Server.class);
 
         Server server = new Server();
         logger.info("com.alibaba.middleware.race.sync.Server is running....");
@@ -59,6 +59,9 @@ public class Server {
      * id>100 and id<200
      */
     private static void printInput(String[] args) {
+
+        Logger logger = LoggerFactory.getLogger(Server.class);
+
         // 第一个参数是Schema Name
         logger.info("Schema:" + args[0]);
         // 第二个参数是Schema Name
@@ -77,6 +80,7 @@ public class Server {
         System.setProperty("middleware.test.home", Constants.TESTER_HOME);
         System.setProperty("middleware.teamcode", Constants.TEAMCODE);
         System.setProperty("app.logging.level", Constants.LOG_LEVEL);
+        System.setProperty("log.name", "server-custom");
     }
 
 

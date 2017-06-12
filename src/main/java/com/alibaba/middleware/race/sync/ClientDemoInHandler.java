@@ -17,10 +17,10 @@ import static com.alibaba.middleware.race.sync.Constants.RESULT_HOME;
  */
 public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
-    private static Logger logger = LoggerFactory.getLogger(ClientDemoInHandler.class);
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        Logger logger = LoggerFactory.getLogger(ClientDemoInHandler.class);
 
         logger.info("write to " + RESULT_HOME + RESULT_FILE_NAME);
 

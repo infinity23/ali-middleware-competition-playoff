@@ -7,9 +7,6 @@ import io.netty.handler.timeout.IdleStateEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Created by wanshao on 2017/5/25.
- */
 public class ClientIdleEventHandler extends ChannelDuplexHandler {
 
     Logger logger = LoggerFactory.getLogger(ClientIdleEventHandler.class);

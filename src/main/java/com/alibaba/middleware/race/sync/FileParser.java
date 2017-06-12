@@ -19,7 +19,6 @@ public class FileParser {
     private int lo;
     private int hi;
 
-    private static Logger logger = LoggerFactory.getLogger(FileParser.class);
 
     public FileParser(String schema, String table, int lo, int hi) {
         this.schema = schema;
@@ -114,6 +113,16 @@ public class FileParser {
 
     }
 
+    private int seekForSP(MappedByteBuffer mappedByteBuffer){
+        while (mappedByteBuffer.get() != SP){}
+        return mappedByteBuffer.position();
+    }
+
+    private int seekForEN(MappedByteBuffer mappedByteBuffer){
+        while (mappedByteBuffer.get() != EN){}
+        return mappedByteBuffer.position();
+    }
+
 
 
     public void showResult() {
@@ -175,6 +184,7 @@ public class FileParser {
                 fileWriter.write(stringBuilder.toString());
 
                 //测试用
+                Logger logger = LoggerFactory.getLogger(Server.class);
                 logger.info(stringBuilder.toString());
 
                 stringBuilder.delete(0, stringBuilder.length());
