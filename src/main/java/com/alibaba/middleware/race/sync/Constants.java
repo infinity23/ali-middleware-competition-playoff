@@ -2,22 +2,33 @@ package com.alibaba.middleware.race.sync;
 
 import java.nio.charset.Charset;
 
+/**
+ * 外部赛示例代码需要的常量 Created by wanshao on 2017/5/25.
+ */
 interface Constants {
 
     Charset CHARSET = Charset.forName("UTF-8");
     byte EN = 10;
+    byte SP = 124;
 
     // ------------ 本地测试可以使用自己的路径--------------//
 
-////     工作主目录
-//     String TESTER_HOME = "D:\\IncrementalSync\\data";
+    ////     工作主目录
+//     String TESTER_HOME = "E:\\Major\\IncrementalSync\\example";
 ////     赛题数据
+//    String DATA_HOME = "E:\\Major\\IncrementalSync\\example\\";
+//    // 结果文件目录
+//    String RESULT_HOME = "E:\\Major\\IncrementalSync\\example\\result\\";
+//    // 中间结果目录
+//    String MIDDLE_HOME = "E:\\Major\\IncrementalSync\\example\\middle\\";
+//     工作主目录
+//    String TESTER_HOME = "D:\\IncrementalSync\\data";
+//    //     赛题数据
 //    String DATA_HOME = "D:\\IncrementalSync\\data\\";
 //    // 结果文件目录
 //    String RESULT_HOME = "D:\\IncrementalSync\\data\\result\\";
 //    // 中间结果目录
 //    String MIDDLE_HOME = "D:\\IncrementalSync\\data\\middle\\";
-
 
 
     // server端口
@@ -28,10 +39,10 @@ interface Constants {
     String LOG_LEVEL = "INFO";
 
     //     结果文件的命名
-     String RESULT_FILE_NAME = "Result.rs";
+    String RESULT_FILE_NAME = "Result.rs";
     // ------------ 正式比赛指定的路径--------------//
 
-    //// 工作主目录
+    // 工作主目录
     String TESTER_HOME = "/home/admin";
     // 赛题数据
      String DATA_HOME = "/home/admin/canal_data/";

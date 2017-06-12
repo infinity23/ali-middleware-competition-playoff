@@ -12,11 +12,7 @@ import java.nio.channels.FileChannel;
 import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
 import static com.alibaba.middleware.race.sync.Constants.RESULT_HOME;
 
-/**
- * Created by wanshao on 2017/5/25.
- */
 public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
-
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
