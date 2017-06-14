@@ -125,7 +125,8 @@ public class Server {
         Logger logger = LoggerFactory.getLogger(Server.class);
 
         logger.info("start fileParser...");
-        FileParser fileParser = new FileParser(schema,table,start,end);
+//        FileParser fileParser = new FileParser(schema,table,start,end);
+        FileParser2 fileParser = new FileParser2(schema,table,start,end);
 
         for (int i = 1; i <= 10; i++) {
             fileParser.readPage((byte) i);

@@ -9,16 +9,17 @@ import java.util.*;
 
 import static com.alibaba.middleware.race.sync.Constants.*;
 
-//预处理数据，记录索引，再处理索引
-public class FileParser {
+
+//直接解析为数据集，不进行预处理
+public class FileParser2 {
     private String schema;
     private String table ;
-    private HashMap<Long, Record> indexMap = new HashMap<>();
     private int lo;
     private int hi;
 
+    private HashMap<Long,LinkedHashMap<String, String>> resultMap = new HashMap<>();
 
-    public FileParser(String schema, String table, int lo, int hi) {
+    public FileParser2(String schema, String table, int lo, int hi) {
         this.schema = schema;
         this.table = table;
         this.lo = lo;
@@ -28,7 +29,7 @@ public class FileParser {
         System.getProperties().put("file.decoding", "UTF-8");
     }
 
-    private HashMap<Byte, MappedByteBuffer> mappedByteBufferHashMap = new HashMap<>(10);
+//    private HashMap<Byte, MappedByteBuffer> mappedByteBufferHashMap = new HashMap<>(10);
 
     public void readPage(byte fileName) {
         try {
@@ -39,7 +40,7 @@ public class FileParser {
 
             FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
             MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
-            mappedByteBufferHashMap.put(fileName,mappedByteBuffer);
+//            mappedByteBufferHashMap.put(fileName,mappedByteBuffer);
 
             int position;
             int end;
@@ -66,31 +67,38 @@ public class FileParser {
                 Long pk;
                 if (operation == 'I') {
                     pk = Long.parseLong(ss[7]);
-                    indexMap.put(pk, new Record(fileName, position, fileLen));
+//                    indexMap.put(pk, new Record(fileName, position, fileLen));
+                    LinkedHashMap<String,String> record = new LinkedHashMap<>();
+                    parsKeyValue(ss, record);
+                    resultMap.put(pk, record);
                 } else if (operation == 'U') {
                     pk = Long.parseLong(ss[6]);
                     //处理主键变更
                     if (!ss[6].equals(ss[7])) {
                         long newPK = Long.parseLong(ss[7]);
-                        indexMap.put(newPK, indexMap.get(pk));
-                        indexMap.remove(pk);
+                        resultMap.put(newPK, resultMap.get(pk));
+                        resultMap.remove(pk);
                         pk = newPK;
                     }
-
-                    for (int j = 8; j < ss.length - 2; j++) {
-                        String name = parseName(ss[j]);
-                        indexMap.get(pk).addUpdate(name, fileName, position, fileLen);
-                        j += 2;
-                    }
+                    parsKeyValue(ss, resultMap.get(pk));
 
                 } else {
                     pk = Long.parseLong(ss[6]);
-                    indexMap.remove(pk);
+                    resultMap.remove(pk);
                 }
             }
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void parsKeyValue(String[] ss, HashMap<String, String> record) {
+        for (int j = 8; j < ss.length - 2; j++) {
+            String name = parseName(ss[j]);
+            String value = ss[j + 2];
+            record.put(name, value);
+            j += 2;
         }
     }
 
@@ -100,19 +108,19 @@ public class FileParser {
     }
 
 
-    private String[] readDate(byte fileName, int filePoint, int fileLen) {
-
-        MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
-
-        mappedByteBuffer.position(filePoint);
-        byte[] bytes = new byte[fileLen];
-        mappedByteBuffer.get(bytes);
-
-        String s = new String(bytes);
-
-        return s.substring(1, s.length() - 1).split("\\|");
-
-    }
+//    private String[] readDate(byte fileName, int filePoint, int fileLen) {
+//
+//        MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
+//
+//        mappedByteBuffer.position(filePoint);
+//        byte[] bytes = new byte[fileLen];
+//        mappedByteBuffer.get(bytes);
+//
+//        String s = new String(bytes);
+//
+//        return s.substring(1, s.length() - 1).split("\\|");
+//
+//    }
 
     private int seekForSP(MappedByteBuffer mappedByteBuffer){
         while (mappedByteBuffer.get() != SP){}
@@ -132,8 +140,7 @@ public class FileParser {
 
             StringBuilder stringBuilder = new StringBuilder();
 
-
-            ArrayList<Long> pks = new ArrayList<>(indexMap.keySet());
+            ArrayList<Long> pks = new ArrayList<>(resultMap.keySet());
             System.out.println(pks.size());
             Collections.sort(pks);
             Iterator<Long> it = pks.iterator();
@@ -143,44 +150,14 @@ public class FileParser {
                 if (pk <= lo || pk >= hi) {
                     continue;
                 }
-                Record record = indexMap.get(pk);
-                byte fileName = record.getInsertFileName();
-                int filePoint = record.getInsertFilePosition();
-                int fileLen = record.getInsertFileLen();
-                String[] ss = readDate(fileName, filePoint, fileLen);
-                LinkedHashMap<String, String> map = new LinkedHashMap<>();
-                for (int j = 8; j < ss.length - 2; j++) {
-                    String name = parseName(ss[j]);
-                    String value = ss[j + 2];
-                    map.put(name, value);
-                    j += 2;
-                }
 
-                HashMap<String, UpdateRecord> update = record.getUpdate();
-                for (Map.Entry<String, UpdateRecord> entry : update.entrySet()) {
-                    String key = entry.getKey();
-                    UpdateRecord updateRecord = entry.getValue();
-                    fileName = updateRecord.getUpdateFileName();
-                    filePoint = updateRecord.getUpdateFilePosition();
-                    fileLen = updateRecord.getUpdateFileLen();
-                    ss = readDate(fileName, filePoint, fileLen);
+                LinkedHashMap<String, String> keyValue = resultMap.get(pk);
 
-                    for (int j = 8; j < ss.length - 2; j++) {
-                        String name = parseName(ss[j]);
-                        if(key.equals(name)){
-                            String value = ss[j + 2];
-                            map.put(name, value);
-                            break;
-                        }
-                        j += 2;
-                    }
-
-                }
 
                 stringBuilder.append(pk);
-                for (Map.Entry<String, String> keyValue : map.entrySet()) {
+                for (Map.Entry<String, String> entry : keyValue.entrySet()) {
                     stringBuilder.append('\t');
-                    stringBuilder.append(keyValue.getValue());
+                    stringBuilder.append(entry.getValue());
                 }
                 stringBuilder.append('\n');
                 fileWriter.write(stringBuilder.toString());
