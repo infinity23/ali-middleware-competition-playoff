@@ -37,7 +37,6 @@ public class Server {
 //    }
 
 
-
     public static void main(String[] args) throws InterruptedException {
         initProperties();
         printInput(args);
@@ -93,26 +92,31 @@ public class Server {
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
-                        // 注册handler
-                        ch.pipeline().addLast(new ServerDemoInHandler(schema, table, start, end));
-                        // ch.pipeline().addLast(new ServerDemoOutHandler());
-                    }
-                })
-                .option(ChannelOption.SO_BACKLOG, 128)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            // 注册handler
+                            ch.pipeline().addLast(new ServerDemoInHandler(schema, table, start, end));
+                            // ch.pipeline().addLast(new ServerDemoOutHandler());
+                        }
+                    })
+                    .option(ChannelOption.SO_BACKLOG, 128)
 //                    .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024 * 1024 * 500,1024 * 1024 * 500))
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
+                    .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             ChannelFuture f = b.bind(port).sync();
-//
+
+            Logger logger = LoggerFactory.getLogger(Server.class);
+
+            long parseStart = System.currentTimeMillis();
             parseFile();
+            long parseEnd = System.currentTimeMillis();
+            logger.info("parseFile time: " + (parseEnd - parseStart));
+
             writeFile();
 
             f.channel().closeFuture().sync();
-
 
 
         } finally {
@@ -121,12 +125,12 @@ public class Server {
         }
     }
 
-    private void parseFile(){
+    private void parseFile() {
         Logger logger = LoggerFactory.getLogger(Server.class);
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser2 fileParser = new FileParser2(schema,table,start,end);
+        FileParser fileParser = new FileParser(schema, table, start, end);
 
         for (int i = 1; i <= 10; i++) {
             fileParser.readPage((byte) i);
@@ -137,7 +141,7 @@ public class Server {
         logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
     }
 
-    private void writeFile(){
+    private void writeFile() {
         Logger logger = LoggerFactory.getLogger(Server.class);
         try {
             String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
@@ -147,8 +151,8 @@ public class Server {
 
             final ChannelFuture future2 = channel.writeAndFlush(fileRegion);
             future2.addListener(ChannelFutureListener.CLOSE);
-        }catch (IOException e){
-            logger.error("writeFile error",e);
+        } catch (IOException e) {
+            logger.error("writeFile error", e);
         }
     }
 
