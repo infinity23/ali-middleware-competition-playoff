@@ -3,9 +3,8 @@ package com.alibaba.middleware.race.sync;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
@@ -15,25 +14,48 @@ import static com.alibaba.middleware.race.sync.Constants.RESULT_HOME;
 public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
 
+    private FileChannel fileChannel;
+
+    public ClientDemoInHandler() {
+        try {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(RESULT_HOME + RESULT_FILE_NAME, "rw");
+            fileChannel = randomAccessFile.getChannel();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf buf = (ByteBuf) msg;
-        Logger logger = LoggerFactory.getLogger(ClientDemoInHandler.class);
+////
+//        if(first) {
+//            ByteBuf byteBuf = ctx.alloc().buffer(4);
+//            buf.getBytes(0,byteBuf);
+//
+//            len = byteBuf.readInt();
+//
+//            first = false;
+//            buf.release();
+//            return;
+//        }
 
-        logger.info("write to " + RESULT_HOME + RESULT_FILE_NAME);
+//        Logger logger = LoggerFactory.getLogger(ClientDemoInHandler.class);
+//        logger.info("write to " + RESULT_HOME + RESULT_FILE_NAME);
 
-        String fileName = RESULT_HOME + RESULT_FILE_NAME;
-        RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "rw");
-        FileChannel fileChannel = randomAccessFile.getChannel();
         fileChannel.write(buf.nioBuffer());
 
         //测试输出信息
-        System.out.print(buf.readCharSequence((int) randomAccessFile.length(), Constants.CHARSET));
+//        System.out.print(buf.readCharSequence(buf.readableBytes(), Constants.CHARSET));
 
-        fileChannel.close();
-
-        ctx.close();
         buf.release();
+
+//        if(fileChannel.size() == len) {
+//            fileChannel.close();
+//            ctx.close();
+//        }
+//        fileChannel.close();
+//        ctx.close();
     }
 
     // 连接成功后，向server发送消息

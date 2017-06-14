@@ -78,6 +78,7 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         Server.channel = ctx.channel();
+
     }
 
 //    @Override

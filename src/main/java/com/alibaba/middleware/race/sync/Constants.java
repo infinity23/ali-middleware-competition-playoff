@@ -19,6 +19,15 @@ interface Constants {
 //    // 中间结果目录
 //    String MIDDLE_HOME = "E:\\Major\\IncrementalSync\\example\\middle\\";
 
+//    //     工作主目录
+//     String TESTER_HOME = "E:\\Major\\IncrementalSync\\";
+////     赛题数据
+//    String DATA_HOME = "E:\\Major\\IncrementalSync\\data\\";
+//    // 结果文件目录
+//    String RESULT_HOME = "E:\\Major\\IncrementalSync\\result\\";
+//    // 中间结果目录
+//    String MIDDLE_HOME = "E:\\Major\\IncrementalSync\\middle\\";
+
 ////     工作主目录
 //    String TESTER_HOME = "D:\\IncrementalSync\\data";
 //    //     赛题数据

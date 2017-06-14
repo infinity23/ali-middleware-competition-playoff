@@ -54,12 +54,14 @@ public class Client {
             b.channel(NioSocketChannel.class);
             b.option(ChannelOption.SO_KEEPALIVE, true)
                     .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
+//                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(1024 * 1024 * 100));
             b.handler(new ChannelInitializer<SocketChannel>() {
 
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
 //                    ch.pipeline().addLast(new IdleStateHandler(10, 0, 0));
 //                    ch.pipeline().addLast(new ClientIdleEventHandler());
+//                    ch.pipeline().addLast("decoder", new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024,0,4,0,4));
                     ch.pipeline().addLast(new ClientDemoInHandler());
                 }
             });

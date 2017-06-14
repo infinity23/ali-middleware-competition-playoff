@@ -12,7 +12,7 @@ import static com.alibaba.middleware.race.sync.Constants.*;
 public class FileParser {
     private String schema;
     private String table ;
-    private HashMap<Integer, Record> indexMap = new HashMap<>();
+    private HashMap<Long, Record> indexMap = new HashMap<>();
     private int lo;
     private int hi;
 
@@ -62,15 +62,15 @@ public class FileParser {
                 }
 
                 char operation = ss[4].charAt(0);
-                int pk;
+                Long pk;
                 if (operation == 'I') {
-                    pk = Integer.parseInt(ss[7]);
+                    pk = Long.parseLong(ss[7]);
                     indexMap.put(pk, new Record(fileName, position, fileLen));
                 } else if (operation == 'U') {
-                    pk = Integer.parseInt(ss[6]);
+                    pk = Long.parseLong(ss[6]);
                     //处理主键变更
                     if (!ss[6].equals(ss[7])) {
-                        int newPK = Integer.parseInt(ss[7]);
+                        long newPK = Long.parseLong(ss[7]);
                         indexMap.put(newPK, indexMap.get(pk));
                         indexMap.remove(pk);
                         pk = newPK;
@@ -83,7 +83,7 @@ public class FileParser {
                     }
 
                 } else {
-                    pk = Integer.parseInt(ss[6]);
+                    pk = Long.parseLong(ss[6]);
                     indexMap.remove(pk);
                 }
             }
@@ -132,12 +132,12 @@ public class FileParser {
             StringBuilder stringBuilder = new StringBuilder();
 
 
-            ArrayList<Integer> pks = new ArrayList<>(indexMap.keySet());
+            ArrayList<Long> pks = new ArrayList<>(indexMap.keySet());
             Collections.sort(pks);
-            Iterator<Integer> it = pks.iterator();
+            Iterator<Long> it = pks.iterator();
 
             while(it.hasNext()){
-                int pk = it.next();
+                long pk = it.next();
                 if (pk <= lo || pk >= hi) {
                     continue;
                 }

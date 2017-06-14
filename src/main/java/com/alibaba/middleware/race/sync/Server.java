@@ -103,10 +103,11 @@ public class Server {
                     }
                 })
                 .option(ChannelOption.SO_BACKLOG, 128)
+//                    .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024 * 1024 * 500,1024 * 1024 * 500))
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             ChannelFuture f = b.bind(port).sync();
-
+//
             parseFile();
             writeFile();
 
@@ -143,10 +144,8 @@ public class Server {
             FileChannel fileChannel = randomAccessFile.getChannel();
             FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
 
-//            final ChannelFuture future = ctx.writeAndFlush(fileRegion);
-            final ChannelFuture future = channel.writeAndFlush(fileRegion);
-
-            future.addListener(ChannelFutureListener.CLOSE);
+            final ChannelFuture future2 = channel.writeAndFlush(fileRegion);
+            future2.addListener(ChannelFutureListener.CLOSE);
         }catch (IOException e){
             logger.error("writeFile error",e);
         }
