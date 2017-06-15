@@ -17,6 +17,8 @@ public class FileParser {
     private int lo;
     private int hi;
 
+    public static int n;
+
 
     public FileParser(String schema, String table, int lo, int hi) {
         this.schema = schema;
@@ -65,6 +67,7 @@ public class FileParser {
                 char operation = ss[4].charAt(0);
                 Long pk;
                 if (operation == 'I') {
+                    n++;
                     pk = Long.parseLong(ss[7]);
                     indexMap.put(pk, new Record(fileName, position, fileLen));
                 } else if (operation == 'U') {

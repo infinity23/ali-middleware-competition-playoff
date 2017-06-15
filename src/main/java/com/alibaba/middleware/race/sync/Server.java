@@ -135,6 +135,7 @@ public class Server {
         for (int i = 1; i <= 10; i++) {
             fileParser.readPage((byte) i);
             logger.info("fileParser has read " + i);
+            logger.info("insert " + FileParser.n);
         }
         logger.info("start showResult...");
         fileParser.showResult();
