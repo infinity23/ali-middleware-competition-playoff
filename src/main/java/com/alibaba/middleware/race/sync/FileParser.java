@@ -34,10 +34,6 @@ public class FileParser {
 
     public void readPage(byte fileName) {
         try {
-//            FileInputStream fileInputStream = new FileInputStream(path + fileName);
-//            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream,Constants.CHARSET);
-//            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-
 
             FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
             MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());

@@ -8,10 +8,10 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.nio.channels.FileChannel;
 
+import static com.alibaba.middleware.race.sync.Constants.DATA_HOME;
 import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
 
 public class Server {
@@ -130,8 +130,22 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser fileParser = new FileParser(schema, table, start, end);
 
+
+        //测试打印赛题数据
+        try {
+            FileReader fileReader = new FileReader(DATA_HOME + "1.txt");
+            BufferedReader bufferedReader = new BufferedReader(fileReader);
+            for (int i = 0; i < 20; i++) {
+                logger.info(bufferedReader.readLine());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+
+        FileParser fileParser = new FileParser(schema, table, start, end);
         for (int i = 1; i <= 10; i++) {
             fileParser.readPage((byte) i);
             logger.info("fileParser has read " + i);

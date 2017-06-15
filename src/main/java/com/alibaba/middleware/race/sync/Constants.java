@@ -5,8 +5,12 @@ import java.nio.charset.Charset;
 interface Constants {
 
     Charset CHARSET = Charset.forName("UTF-8");
+    //'\n'
     byte EN = 10;
+    //'|'
     byte SP = 124;
+    //':'
+    byte CO = 58;
 
     // ------------ 本地测试可以使用自己的路径--------------//
 
