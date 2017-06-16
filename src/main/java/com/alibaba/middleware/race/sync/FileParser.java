@@ -17,8 +17,6 @@ public class FileParser {
     private int lo;
     private int hi;
 
-    public static int n;
-
 
     public FileParser(String schema, String table, int lo, int hi) {
         this.schema = schema;
@@ -34,6 +32,10 @@ public class FileParser {
 
     public void readPage(byte fileName) {
         try {
+//            FileInputStream fileInputStream = new FileInputStream(path + fileName);
+//            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream,Constants.CHARSET);
+//            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+
 
             FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
             MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
@@ -63,7 +65,6 @@ public class FileParser {
                 char operation = ss[4].charAt(0);
                 Long pk;
                 if (operation == 'I') {
-                    n++;
                     pk = Long.parseLong(ss[7]);
                     indexMap.put(pk, new Record(fileName, position, fileLen));
                 } else if (operation == 'U') {
