@@ -284,7 +284,7 @@ public class FileParser3 {
         return new String(bytes, p, i - p);
     }
 
-    
+
 
     //寻找第n个SP，指向SP下个元素
     private int seekForSP(MappedByteBuffer mappedByteBuffer, int n) {
