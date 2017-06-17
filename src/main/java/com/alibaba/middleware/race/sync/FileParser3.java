@@ -68,15 +68,15 @@ public class FileParser3 {
     //主键名单元长度
     private int pkName = 8;
 
-
     private HashMap<Long, FilePointer> insertMap = new HashMap<>();
     private HashMap<Long, HashMap<Byte ,String>> updateMap = new HashMap<>();
-    private BlockingQueue<byte[]> writeQueue = new LinkedBlockingQueue<>();
+    private BlockingQueue<byte[]> writeQueue = new LinkedBlockingQueue<>(100);
 
     private int insertIndex;
 
     //行指针
     private int rowIndex;
+    private boolean writeFinish;
 
 
     public FileParser3(String schema, String table, int lo, int hi) {
@@ -251,6 +251,37 @@ public class FileParser3 {
     }
 
 
+    //mappedByteBuffer指向下行开头
+    private void parsKeyValue2(MappedByteBuffer mappedByteBuffer, HashMap<String, String> record) {
+
+        int p = mappedByteBuffer.position();
+        mappedByteBuffer.mark();
+        seekForEN(mappedByteBuffer);
+        int end = mappedByteBuffer.position() - 1;
+        if (end - p == 0) {
+            return;
+        }
+        mappedByteBuffer.reset();
+        byte[] bytes = new byte[end - p];
+        mappedByteBuffer.get(bytes);
+        mappedByteBuffer.get();
+
+        String s = new String(bytes);
+        int i = 0;
+        while (true) {
+            String key = parseName4(s, i);
+            i = s.indexOf(SP, i + 1);
+            i = s.indexOf(SP, i + 1);
+            p = s.indexOf(SP, i + 1);
+            String value = s.substring(i + 1, p);
+            record.put(key, value);
+            if (p == s.length() - 1) {
+                break;
+            }
+            i = p + 1;
+        }
+
+    }
 
     private String parseName4(String s, int index) {
         int i = s.indexOf(":", index + 1);
@@ -285,6 +316,19 @@ public class FileParser3 {
     }
 
 
+//    private String[] readDate(byte fileName, int filePoint, int fileLen) {
+//
+//        MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
+//
+//        mappedByteBuffer.position(filePoint);
+//        byte[] bytes = new byte[fileLen];
+//        mappedByteBuffer.get(bytes);
+//
+//        String s = new String(bytes);
+//
+//        return s.substring(1, s.length() - 1).split("\\|");
+//
+//    }
 
     //寻找第n个SP，指向SP下个元素
     private int seekForSP(MappedByteBuffer mappedByteBuffer, int n) {
@@ -304,6 +348,8 @@ public class FileParser3 {
 
 
     public void showResult() {
+        writeFinish = true;
+
         try {
             FileWriter fileWriter = new FileWriter(MIDDLE_HOME + RESULT_FILE_NAME);
             StringBuilder stringBuilder = new StringBuilder();
@@ -373,7 +419,17 @@ public class FileParser3 {
         @Override
         public void run() {
             try {
-                insertWriter.put(writeQueue.take());
+                while(true) {
+                    if(writeFinish){
+                        byte[] bytes = writeQueue.poll();
+                        if (bytes == null){
+                            break;
+                        }
+                        insertWriter.put(bytes);
+                    }else {
+                        insertWriter.put(writeQueue.take());
+                    }
+                }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
