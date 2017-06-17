@@ -6,6 +6,10 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.alibaba.middleware.race.sync.Constants.*;
 
@@ -17,6 +21,7 @@ public class FileParser3 {
     private String table;
     private int lo;
     private int hi;
+    private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
 //    //    属性约定表,用索引指代属性
 //    private HashMap<String, Byte> keyMap = new HashMap<String, Byte>(4) {
@@ -36,7 +41,7 @@ public class FileParser3 {
 //        }
 //    };
     //    属性约定表,用索引指代属性(赛题)
-    private HashMap<String, Byte> keyMap = new HashMap<String, Byte>(5) {
+    private HashMap<String, Byte> keyMap = new HashMap<String, Byte>(4) {
         {
             put("first_name",(byte) 0);
             put("last_name", (byte) 1);
@@ -45,7 +50,7 @@ public class FileParser3 {
             put("score2", (byte) 4);
         }
     };
-    private HashMap<Byte, String> decodeKeyMap = new HashMap<Byte, String>(5) {
+    private HashMap<Byte, String> decodeKeyMap = new HashMap<Byte, String>(4) {
         {
             put((byte) 0,"first_name");
             put((byte) 1,"last_name");
@@ -66,8 +71,8 @@ public class FileParser3 {
 
     private HashMap<Long, FilePointer> insertMap = new HashMap<>();
     private HashMap<Long, HashMap<Byte ,String>> updateMap = new HashMap<>();
+    private BlockingQueue<byte[]> writeQueue = new LinkedBlockingQueue<>();
 
-    private MappedByteBuffer insertWriter;
     private int insertIndex;
 
     //行指针
@@ -83,11 +88,8 @@ public class FileParser3 {
         System.getProperties().put("file.encoding", "UTF-8");
         System.getProperties().put("file.decoding", "UTF-8");
 
-        try {
-            insertWriter = new RandomAccessFile(MIDDLE_HOME + "insert", "rw").getChannel().map(FileChannel.MapMode.READ_WRITE,0,1024 * 1024 * 1024);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+        executorService.execute(new InsertWriter());
 
     }
 
@@ -118,7 +120,7 @@ public class FileParser3 {
                 if (operation == 'I') {
                     pk = parsePK(bytes, 2);
                     int len = bytes.length - rowIndex;
-                    insertWriter.put(bytes, rowIndex,len);
+                    write(bytes, rowIndex,len);
                     insertMap.put(pk, new FilePointer(insertIndex, len));
                     //最小化内存
                     updateMap.put(pk, new HashMap<Byte,String>(0,1));
@@ -161,6 +163,19 @@ public class FileParser3 {
             e.printStackTrace();
         }
     }
+
+    private void write(byte[] bytes, int p, int len){
+        byte[] bytes1 = new byte[len];
+        System.arraycopy(bytes,p,bytes1,0,len);
+        try {
+            writeQueue.put(bytes1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
     private char parseOperation(byte[] bytes) {
@@ -236,37 +251,6 @@ public class FileParser3 {
     }
 
 
-    //mappedByteBuffer指向下行开头
-    private void parsKeyValue2(MappedByteBuffer mappedByteBuffer, HashMap<String, String> record) {
-
-        int p = mappedByteBuffer.position();
-        mappedByteBuffer.mark();
-        seekForEN(mappedByteBuffer);
-        int end = mappedByteBuffer.position() - 1;
-        if (end - p == 0) {
-            return;
-        }
-        mappedByteBuffer.reset();
-        byte[] bytes = new byte[end - p];
-        mappedByteBuffer.get(bytes);
-        mappedByteBuffer.get();
-
-        String s = new String(bytes);
-        int i = 0;
-        while (true) {
-            String key = parseName4(s, i);
-            i = s.indexOf(SP, i + 1);
-            i = s.indexOf(SP, i + 1);
-            p = s.indexOf(SP, i + 1);
-            String value = s.substring(i + 1, p);
-            record.put(key, value);
-            if (p == s.length() - 1) {
-                break;
-            }
-            i = p + 1;
-        }
-
-    }
 
     private String parseName4(String s, int index) {
         int i = s.indexOf(":", index + 1);
@@ -300,20 +284,7 @@ public class FileParser3 {
         return new String(bytes, p, i - p);
     }
 
-
-//    private String[] readDate(byte fileName, int filePoint, int fileLen) {
-//
-//        MappedByteBuffer mappedByteBuffer = mappedByteBufferHashMap.get(fileName);
-//
-//        mappedByteBuffer.position(filePoint);
-//        byte[] bytes = new byte[fileLen];
-//        mappedByteBuffer.get(bytes);
-//
-//        String s = new String(bytes);
-//
-//        return s.substring(1, s.length() - 1).split("\\|");
-//
-//    }
+    
 
     //寻找第n个SP，指向SP下个元素
     private int seekForSP(MappedByteBuffer mappedByteBuffer, int n) {
@@ -388,6 +359,27 @@ public class FileParser3 {
             e.printStackTrace();
         }
     }
+
+    private class InsertWriter implements Runnable {
+        private MappedByteBuffer insertWriter;
+        public InsertWriter() {
+            try {
+                insertWriter = new RandomAccessFile(MIDDLE_HOME + "insert", "rw").getChannel().map(FileChannel.MapMode.READ_WRITE,0,1024 * 1024 * 1024);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+            try {
+                insertWriter.put(writeQueue.take());
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
 
 }
