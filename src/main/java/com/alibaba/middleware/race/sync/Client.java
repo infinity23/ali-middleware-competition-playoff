@@ -67,8 +67,15 @@ public class Client {
             });
 
             // Start the client.
-            ChannelFuture f = b.connect(host, port).sync();
-
+            ChannelFuture f = null;
+            while(true) {
+                try {
+                    f = b.connect(host, port).sync();
+                    break;
+                }catch (Exception e){
+                }
+            }
+            System.out.println("client connected..");
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
 
