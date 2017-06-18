@@ -8,10 +8,9 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.alibaba.middleware.race.sync.Constants.*;
 
@@ -79,7 +78,7 @@ public class FileParser3 {
 
     private HashMap<Long, Integer> insertMap = new LinkedHashMap<>();
     private HashMap<Long, HashMap<Byte, byte[]>> updateMap = new HashMap<>();
-    private BlockingQueue<byte[]> writeQueue = new LinkedBlockingQueue<>(100);
+    private Queue<byte[]> writeQueue = new ConcurrentLinkedQueue<>();
 
     private int insertIndex;
 
@@ -89,16 +88,13 @@ public class FileParser3 {
 
 
     public FileParser3() {
-//        this.schema = schema;
-//        this.table = table;
-//        this.lo = lo;
-//        this.hi = hi;
 
         System.getProperties().put("file.encoding", "UTF-8");
         System.getProperties().put("file.decoding", "UTF-8");
 
 
         executorService.execute(new InsertWriter());
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
 
     }
 
@@ -132,7 +128,7 @@ public class FileParser3 {
                     write(bytes, rowIndex, len);
                     insertMap.put(pk, insertIndex);
                     //最小化内存
-                    updateMap.put(pk, new HashMap<Byte, byte[]>(0));
+                    updateMap.put(pk, new HashMap<Byte, byte[]>(5, 1));
                     insertIndex += MAX_KEYVALUE_SIZE;
 
                 } else if (operation == 'U') {
@@ -170,13 +166,9 @@ public class FileParser3 {
     }
 
     private void write(byte[] bytes, int rowIndex, int len) {
-        try {
-            byte[] temp = new byte[MAX_KEYVALUE_SIZE];
-            System.arraycopy(bytes, rowIndex, temp, 0, len);
-            writeQueue.put(temp);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        byte[] temp = new byte[MAX_KEYVALUE_SIZE];
+        System.arraycopy(bytes, rowIndex, temp, 0, len);
+        writeQueue.offer(temp);
     }
 
 
@@ -214,8 +206,8 @@ public class FileParser3 {
 
         long val = 0;
         int scale = 1;
-        for (int i =  rowIndex - 2 ; i >= start; i--) {
-            val += (bytes[i] - '0') * scale ;
+        for (int i = rowIndex - 2; i >= start; i--) {
+            val += (bytes[i] - '0') * scale;
             scale *= 10;
         }
 
@@ -293,7 +285,7 @@ public class FileParser3 {
             end = rowIndex - 1;
             byte[] value = copyArray(bytes, start, end);
 
-            update.put(keyMap.get(key[4] + key[5]),value);
+            update.put(keyMap.get(key[4] + key[5]), value);
         }
     }
 
@@ -444,7 +436,6 @@ public class FileParser3 {
 
 
             ArrayList<Integer> pks = new ArrayList<>(resultMap.keySet());
-            System.out.println(pks.size());
             Collections.sort(pks);
 
             for (Integer pk : pks) {
@@ -452,16 +443,17 @@ public class FileParser3 {
             }
             Server.channel.close();
 
-                randomAccessFile.close();
-            } catch(IOException e){
-                e.printStackTrace();
-            }
+            randomAccessFile.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+    }
 
     private class InsertWriter implements Runnable {
         private MappedByteBuffer insertWriter;
 
         public InsertWriter() {
+            Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
             try {
                 insertWriter = new RandomAccessFile(MIDDLE_HOME + "insert", "rw").getChannel().map(FileChannel.MapMode.READ_WRITE, 0, INSERT_SIZE);
             } catch (IOException e) {
@@ -472,23 +464,30 @@ public class FileParser3 {
         @Override
         public void run() {
             byte[] bytes;
-            try {
+//            try {
                 while (true) {
-                    if (writeFinish) {
-                        bytes = writeQueue.poll();
-                        if (bytes == null) {
-                            break;
-                        }
-                        insertWriter.put(bytes);
-                    } else {
-
-                        bytes = writeQueue.take();
+//                    if (writeFinish) {
+//                        bytes = writeQueue.poll();
+//                        if (bytes == null) {
+//                            break;
+//                        }
+//                        insertWriter.put(bytes);
+//                    } else {
+//
+//                        bytes = writeQueue.take();
+//                        insertWriter.put(bytes);
+//                    }
+                    bytes = writeQueue.poll();
+                    if(bytes != null) {
                         insertWriter.put(bytes);
                     }
+                    if(writeFinish){
+                        break;
+                    }
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
     }
 
