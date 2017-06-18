@@ -115,7 +115,7 @@ public class Server {
             long parseEnd = System.currentTimeMillis();
             logger.info("parseFile time: " + (parseEnd - parseStart));
 
-            writeFile();
+//            writeFile();
             f.channel().closeFuture().sync();
 
 
@@ -131,7 +131,7 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser3 fileParser = new FileParser3(schema,table,start,end);
+        FileParser3 fileParser = new FileParser3();
 
         for (int i = 1; i <= 10; i++) {
             fileParser.readPage((byte) i);

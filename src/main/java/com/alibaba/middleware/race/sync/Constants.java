@@ -42,6 +42,31 @@ interface Constants {
 //    String MIDDLE_HOME = "E:\\Major\\IncrementalSync\\middle\\";
 
 
+
+//    //    middleware5 student 100000 2000000
+//    String SCHEMA = "middleware5";
+//    String TABLE = "student";
+//    int LO = 100000;
+//    int HI = 2000000;
+
+    //    middleware5 student 100 200
+//    String SCHEMA = "middleware5";
+//    String TABLE = "student";
+//    int LO = 100;
+//    int HI = 200;
+
+
+
+
+    // ------------ 正式比赛指定的路径--------------//
+
+    //    middleware8 student 1000000 8000000
+    String SCHEMA = "middleware8";
+    String TABLE = "student";
+    int LO = 1000000;
+    int HI = 8000000;
+
+
     // server端口
     Integer SERVER_PORT = 5527;
     // teamCode
@@ -51,7 +76,7 @@ interface Constants {
 
     //     结果文件的命名
     String RESULT_FILE_NAME = "Result.rs";
-    // ------------ 正式比赛指定的路径--------------//
+
 
     // 工作主目录
     String TESTER_HOME = "/home/admin";
