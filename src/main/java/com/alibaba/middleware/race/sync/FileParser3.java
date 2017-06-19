@@ -393,6 +393,7 @@ public class FileParser3 {
 
     public void showResult() {
         writeFinish = true;
+        Logger logger = LoggerFactory.getLogger(Server.class);
 
         try {
 //            FileWriter fileWriter = new FileWriter(MIDDLE_HOME + RESULT_FILE_NAME);
@@ -448,15 +449,14 @@ public class FileParser3 {
             }
 
             //log
-            Logger logger = LoggerFactory.getLogger(Server.class);
             logger.info("result 大小： " + buf.readableBytes());
 
             ChannelFuture future = Server.channel.writeAndFlush(buf);
             future.addListener(ChannelFutureListener.CLOSE);
 
             randomAccessFile.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            logger.error("error in showResult", e);
         }
     }
 
