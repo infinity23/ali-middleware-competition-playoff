@@ -8,9 +8,10 @@ import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static com.alibaba.middleware.race.sync.Constants.*;
 
@@ -78,7 +79,7 @@ public class FileParser3 {
 
     private HashMap<Long, Integer> insertMap = new LinkedHashMap<>();
     private HashMap<Long, HashMap<Byte, byte[]>> updateMap = new HashMap<>();
-    private Queue<byte[]> writeQueue = new ConcurrentLinkedQueue<>();
+    private BlockingQueue<byte[]> writeQueue = new LinkedBlockingQueue<>();
 
     private int insertIndex;
 
@@ -94,7 +95,6 @@ public class FileParser3 {
 
 
         executorService.execute(new InsertWriter());
-        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
 
     }
 
@@ -453,7 +453,6 @@ public class FileParser3 {
         private MappedByteBuffer insertWriter;
 
         public InsertWriter() {
-            Thread.currentThread().setPriority(Thread.NORM_PRIORITY);
             try {
                 insertWriter = new RandomAccessFile(MIDDLE_HOME + "insert", "rw").getChannel().map(FileChannel.MapMode.READ_WRITE, 0, INSERT_SIZE);
             } catch (IOException e) {
@@ -464,30 +463,30 @@ public class FileParser3 {
         @Override
         public void run() {
             byte[] bytes;
-//            try {
+            try {
                 while (true) {
-//                    if (writeFinish) {
-//                        bytes = writeQueue.poll();
-//                        if (bytes == null) {
-//                            break;
-//                        }
-//                        insertWriter.put(bytes);
-//                    } else {
-//
-//                        bytes = writeQueue.take();
-//                        insertWriter.put(bytes);
-//                    }
-                    bytes = writeQueue.poll();
-                    if(bytes != null) {
+                    if (writeFinish) {
+                        bytes = writeQueue.poll();
+                        if (bytes == null) {
+                            break;
+                        }
+                        insertWriter.put(bytes);
+                    } else {
+
+                        bytes = writeQueue.take();
                         insertWriter.put(bytes);
                     }
-                    if(writeFinish){
-                        break;
-                    }
+//                    bytes = writeQueue.poll();
+//                    if(bytes != null) {
+//                        insertWriter.put(bytes);
+//                    }
+//                    if(writeFinish){
+//                        break;
+//                    }
                 }
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
