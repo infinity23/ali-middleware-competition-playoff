@@ -93,7 +93,6 @@ public class FileParser3 {
         System.getProperties().put("file.encoding", "UTF-8");
         System.getProperties().put("file.decoding", "UTF-8");
 
-
         executorService.execute(new InsertWriter());
 
     }
@@ -128,7 +127,7 @@ public class FileParser3 {
                     write(bytes, rowIndex, len);
                     insertMap.put(pk, insertIndex);
                     //最小化内存
-                    updateMap.put(pk, new HashMap<Byte, byte[]>(5, 1));
+                    updateMap.put(pk, new HashMap<Byte, byte[]>(0, 1));
                     insertIndex += MAX_KEYVALUE_SIZE;
 
                 } else if (operation == 'U') {
@@ -439,7 +438,7 @@ public class FileParser3 {
             Collections.sort(pks);
 
             for (Integer pk : pks) {
-                Server.channel.writeAndFlush(resultMap.get(pk));
+                Server.channel.write(resultMap.get(pk));
             }
             Server.channel.close();
 
