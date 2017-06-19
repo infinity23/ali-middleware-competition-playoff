@@ -440,6 +440,7 @@ public class FileParser3 {
             for (Integer pk : pks) {
                 Server.channel.write(resultMap.get(pk));
             }
+            Server.channel.flush();
             Server.channel.close();
 
             randomAccessFile.close();
