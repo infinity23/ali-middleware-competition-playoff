@@ -2,6 +2,10 @@ package com.alibaba.middleware.race.sync;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -127,7 +131,7 @@ public class FileParser3 {
                     write(bytes, rowIndex, len);
                     insertMap.put(pk, insertIndex);
                     //最小化内存
-                    updateMap.put(pk, new HashMap<Byte, byte[]>(0, 1));
+                    updateMap.put(pk, new HashMap<Byte, byte[]>(5, 1));
                     insertIndex += MAX_KEYVALUE_SIZE;
 
                 } else if (operation == 'U') {
@@ -401,6 +405,7 @@ public class FileParser3 {
             LinkedHashMap<Byte, byte[]> keyValue = new LinkedHashMap<>(keyMap.size());
             byte[] bytes = new byte[MAX_KEYVALUE_SIZE];
             HashMap<Integer, ByteBuf> resultMap = new HashMap<>();
+            ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(100 * 1024 * 1024);
             for (Map.Entry<Long, Integer> entry : insertMap.entrySet()) {
                 long pk = entry.getKey();
                 if (pk <= lo || pk >= hi) {
@@ -439,9 +444,15 @@ public class FileParser3 {
 
             for (Integer pk : pks) {
                 Server.channel.write(resultMap.get(pk));
+                buf.writeBytes(resultMap.get(pk));
             }
-            Server.channel.flush();
-            Server.channel.close();
+
+            //log
+            Logger logger = LoggerFactory.getLogger(Server.class);
+            logger.info("result 大小： " + buf.readableBytes());
+
+            ChannelFuture future = Server.channel.writeAndFlush(buf);
+            future.addListener(ChannelFutureListener.CLOSE);
 
             randomAccessFile.close();
         } catch (IOException e) {
