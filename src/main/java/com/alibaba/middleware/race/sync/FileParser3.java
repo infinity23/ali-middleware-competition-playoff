@@ -17,6 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static com.alibaba.middleware.race.sync.Cons.KEYMAP;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
 //insert写中间文件，update内存
@@ -29,49 +30,6 @@ public class FileParser3 {
     private int hi = HI;
     private ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    //    //    属性约定表,用索引指代属性
-//    private HashMap<String, Byte> keyMap = new HashMap<String, Byte>(4) {
-//        {
-//            put("first_name",(byte) 0);
-//            put("last_name", (byte) 1);
-//            put( "sex", (byte) 2);
-//            put("score", (byte) 3);
-//        }
-//    };
-//    private HashMap<Byte, String> decodeKeyMap = new HashMap<Byte, String>(4) {
-//        {
-//            put((byte) 0,"first_name");
-//            put((byte) 1,"last_name");
-//            put((byte) 2,"sex");
-//            put((byte) 3,"score");
-//        }
-//    };
-    //    属性约定表,用索引指代属性(赛题)
-    private HashMap<Integer, Byte> keyMap = new HashMap<Integer, Byte>(4) {
-        {
-            //[4]+[5]
-
-//            first_name:2:0
-            put('t' + '_', (byte) 0);
-//            last_name:2:0
-            put('_' + 'n', (byte) 1);
-//            sex:2:0
-            put('2' + ':', (byte) 2);
-//            score:1:0
-            put('e' + ':', (byte) 3);
-//            score2:1:0
-            put('e' + '2', (byte) 4);
-        }
-    };
-    private HashMap<Byte, byte[]> decodeKeyMap = new HashMap<Byte, byte[]>(4) {
-        {
-            put((byte) 0, "first_name".getBytes(CHARSET));
-            put((byte) 1, "last_name".getBytes(CHARSET));
-            put((byte) 2, "sex".getBytes(CHARSET));
-            put((byte) 3, "score".getBytes(CHARSET));
-            put((byte) 4, "score2".getBytes(CHARSET));
-        }
-    };
 
     //前四个单元长度（一般都是固定的）
     //变动较大，不太实用
@@ -144,11 +102,6 @@ public class FileParser3 {
                         updateMap.remove(pk);
                         insertMap.put(newPK, insertMap.get(pk));
                         insertMap.remove(pk);
-
-//                        if (rowIndex == bytes.length - 1) {
-//                            rowIndex = 0;
-//                            continue;
-//                        }
 
                         pk = newPK;
                     }
@@ -228,7 +181,7 @@ public class FileParser3 {
 //            i = s.indexOf(SP, i + 1);
 //            p = s.indexOf(SP, i + 1);
 //            String value = s.substring(i + 1, p);
-//            update.put(keyMap.get(key), value);
+//            update.put(KEYMAP.get(key), value);
 //            if (p == s.length() - 2) {
 //                break;
 //            }
@@ -253,7 +206,7 @@ public class FileParser3 {
             end = rowIndex - 1;
             byte[] value = copyArray(bytes, start, end);
 
-            update.put(keyMap.get(key[4] + key[5]), value);
+            update.put(KEYMAP.get(key[4] + key[5]), value);
         }
     }
 
@@ -288,7 +241,7 @@ public class FileParser3 {
             end = rowIndex - 1;
             byte[] value = copyArray(bytes, start, end);
 
-            update.put(keyMap.get(key[4] + key[5]), value);
+            update.put(KEYMAP.get(key[4] + key[5]), value);
         }
     }
 
@@ -403,10 +356,11 @@ public class FileParser3 {
             RandomAccessFile randomAccessFile = new RandomAccessFile(MIDDLE_HOME + "insert", "r");
             MappedByteBuffer mappedByteBuffer = randomAccessFile.getChannel().map(FileChannel.MapMode.READ_ONLY, 0, randomAccessFile.length());
 
-            LinkedHashMap<Byte, byte[]> keyValue = new LinkedHashMap<>(keyMap.size());
+            LinkedHashMap<Byte, byte[]> keyValue = new LinkedHashMap<>(KEYMAP.size());
             byte[] bytes = new byte[MAX_KEYVALUE_SIZE];
             HashMap<Integer, ByteBuf> resultMap = new HashMap<>();
             ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(100 * 1024 * 1024);
+
             for (Map.Entry<Long, Integer> entry : insertMap.entrySet()) {
                 long pk = entry.getKey();
                 if (pk <= lo || pk >= hi) {
@@ -455,8 +409,8 @@ public class FileParser3 {
             future.addListener(ChannelFutureListener.CLOSE);
 
             randomAccessFile.close();
-        } catch (Exception e) {
-            logger.error("error in showResult", e);
+        } catch (IOException e) {
+            logger.error("showResult error" ,e);
         }
     }
 

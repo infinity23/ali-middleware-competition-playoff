@@ -46,8 +46,6 @@ public class Client {
     public void connect(String host, int port) throws Exception {
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
-        long start = System.currentTimeMillis();
-
         try {
             Bootstrap b = new Bootstrap();
             b.group(workerGroup);
@@ -75,7 +73,6 @@ public class Client {
                 }catch (Exception e){
                 }
             }
-            System.out.println("client connected..");
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
 
@@ -83,9 +80,7 @@ public class Client {
             workerGroup.shutdownGracefully();
         }
 
-        long end = System.currentTimeMillis();
 
-        System.out.println("client 运行时间： " + (end - start));
 
     }
 

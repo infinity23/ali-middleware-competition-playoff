@@ -107,10 +107,10 @@ public class Resolver {
 
         @Override
         public Result call(){
-            HashMap<Integer, HashMap<String, String>> updateMap = new HashMap<>();
-            HashSet<Integer> deleteSet = new HashSet<>();
-            HashMap<Integer, FilePointer> insertMap = new HashMap<>();
-            LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
+            HashMap<Long, HashMap<String, String>> updateMap = new HashMap<>();
+            HashSet<Long> deleteSet = new HashSet<>();
+            HashMap<Long, Integer> insertMap = new HashMap<>();
+            LinkedHashMap<Long, Long> PKChangeMap = new LinkedHashMap<>();
 //            if(result != null) {
 //                updateMap = result.getUpdateMap();
 //                deleteSet = result.getDeleteSet();
@@ -125,7 +125,7 @@ public class Resolver {
             int start;
             int end;
             char operation;
-            int pk;
+            long pk;
 
             //解析数据
             for (int i = data.length - 1; i >= 0; i--) {
@@ -144,9 +144,9 @@ public class Resolver {
                 operation = ss[4].charAt(0);
 
                 if (operation != 'I') {
-                    pk = Integer.parseInt(ss[6]);
+                    pk = Long.parseLong(ss[6]);
                 } else {
-                    pk = Integer.parseInt(ss[7]);
+                    pk = Long.parseLong(ss[7]);
                 }
 
 //                无法处理主键更改的情况
@@ -163,7 +163,7 @@ public class Resolver {
 
                     //处理改变主键的情况
                     if (!ss[6].equals(ss[7])) {
-                        int newPk = Integer.parseInt(ss[7]);
+                        long newPk = Long.parseLong(ss[7]);
 
 //                        if (!(newPk > lo && newPk < hi)) {
 //                            continue;
@@ -188,7 +188,7 @@ public class Resolver {
                         }
                         updateMap.get(pk).put(name, ss[10]);
                     } else {
-                        HashMap<String, String> map = new HashMap<>();
+                        HashMap<String, String> map = new HashMap<>(0,1);
                         map.put(name, ss[10]);
                         updateMap.put(pk, map);
                     }
