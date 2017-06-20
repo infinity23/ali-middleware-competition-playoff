@@ -111,11 +111,7 @@ public class Server {
             Logger logger = LoggerFactory.getLogger(Server.class);
 
             long parseStart = System.currentTimeMillis();
-            try {
-                parseFile();
-            }catch (Exception e){
-                logger.error("parseFile error",e);
-            }
+            parseFile();
             long parseEnd = System.currentTimeMillis();
             logger.info("parseFile time: " + (parseEnd - parseStart));
 

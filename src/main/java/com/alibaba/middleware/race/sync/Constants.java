@@ -27,7 +27,7 @@ interface Constants {
 //    int LO = 100;
 //    int HI = 200;
 
-//
+
 //    //     工作主目录
 //     String TESTER_HOME = "E:\\Major\\IncrementalSync\\";
 ////     赛题数据
@@ -42,10 +42,12 @@ interface Constants {
 //    String TABLE = "student";
 //    int LO = 100000;
 //    int HI = 2000000;
-//
-//
+
+
 //
 //    int KEY_NUM = 4;
+//    //后缀 keys43 + nulls16 + |12 + 5 + values最小（3 + 3 + 3 + score(1) ）10
+//    int SUFFIX = 86;
 
 
 
@@ -54,7 +56,6 @@ interface Constants {
 
     // ------------ 正式比赛指定的路径--------------//
 
-
     //    middleware8 student 1000000 8000000
     String SCHEMA = "middleware8";
     String TABLE = "student";
@@ -62,6 +63,9 @@ interface Constants {
     int HI = 8000000;
 
     int KEY_NUM = 5;
+
+//    后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
+    int SUFFIX = 104;
 
     // server端口
     Integer SERVER_PORT = 5527;

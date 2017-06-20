@@ -51,7 +51,7 @@ public class FileParser2 {
                 long pk;
                 if (operation == 'I') {
                     //null|
-                    skipNBytes(mappedByteBuffer,5);
+                    skipNBytes(mappedByteBuffer, 5);
 
                     pk = parsePK(mappedByteBuffer);
 
@@ -73,6 +73,9 @@ public class FileParser2 {
                 } else {
                     pk = parsePK(mappedByteBuffer);
                     resultMap.remove(pk);
+
+                    //跳过剩余
+                    skipNBytes(mappedByteBuffer, SUFFIX);
                     seekForEN(mappedByteBuffer);
                 }
             }
@@ -90,9 +93,9 @@ public class FileParser2 {
             if (mappedByteBuffer.get() == EN) {
                 break;
             }
-            seekForSP(mappedByteBuffer, 1);
+            seekForSP(mappedByteBuffer);
             int len = mappedByteBuffer.position() - 1 - start;
-            seekForSP(mappedByteBuffer, 1);
+            seekForSP(mappedByteBuffer);
             switch (len) {
                 case KEY1_LEN:
                     fillArray(mappedByteBuffer, record, 0);
@@ -132,35 +135,64 @@ public class FileParser2 {
 //        skipNBytes(mappedByteBuffer,KEY5_LEN + 6);
 //        fillArray(mappedByteBuffer,record,4);
 
-//        比赛数据
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < KEY_NUM; i++) {
             skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
-            fillArray(mappedByteBuffer, record, i);
+            fillArrayInsert(mappedByteBuffer, record, i);
         }
-
-//        //测试数据
-//        for (int i = 0; i < 4; i++) {
-//            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
-//            fillArray(mappedByteBuffer, record, i);
-//        }
 
         //跳过EN
         mappedByteBuffer.get();
-
     }
 
     //将value填入数组，指向SP后
-    private void fillArray(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
+    private void fillArrayInsert(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
+//        byte b;
+//        byte offset = VAL_OFFSET_ARRAY[val];
+//        //预留一个byte的长度
+//        int i = offset + 1;
+//        while ((b = mappedByteBuffer.get()) != SP) {
+//            record[i++] = b;
+//        }
+//
+//        //计算长度
+//        record[offset] = (byte) (i - offset - 1);
+
         byte b;
-        byte offset = VAL_OFFSET_ARRAY[val];
-        //预留一个byte的长度
-        int i = offset + 1;
+
+        int i = VAL_OFFSET_ARRAY[val];
         while ((b = mappedByteBuffer.get()) != SP) {
             record[i++] = b;
         }
 
-        //计算长度
-        record[offset] = (byte) (i - offset - 1);
+    }
+
+    private void fillArray(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
+//        byte b;
+//        byte offset = VAL_OFFSET_ARRAY[val];
+//        //预留一个byte的长度
+//        int i = offset + 1;
+//        while ((b = mappedByteBuffer.get()) != SP) {
+//            record[i++] = b;
+//        }
+//
+//        //计算长度
+//        record[offset] = (byte) (i - offset - 1);
+
+
+        //不记len清零法
+        byte b;
+        byte offset = VAL_OFFSET_ARRAY[val];
+        byte len = VAL_LEN_ARRAY[val];
+
+        int i = offset;
+        while ((b = mappedByteBuffer.get()) != SP) {
+            record[i++] = b;
+        }
+
+        while(i < offset + len){
+            record[i++] = 0;
+        }
+
 
     }
 
@@ -169,27 +201,12 @@ public class FileParser2 {
     }
 
 
-    //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private char parseOperation(MappedByteBuffer mappedByteBuffer) {
-        //跳过前缀
-        seekForSP(mappedByteBuffer, 5);
-        char op = (char) mappedByteBuffer.get();
-
-        //为parsePK做准备
-//        seekForSP(mappedByteBuffer, 2);
-
-        skipNBytes(mappedByteBuffer,PK_NAME_LEN + 2);
-
-
-        return op;
-    }
-
     // NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
     private Long parsePK(MappedByteBuffer mappedByteBuffer) {
 
         int start = mappedByteBuffer.position();
         mappedByteBuffer.mark();
-        seekForSP(mappedByteBuffer, 1);
+        seekForSP(mappedByteBuffer);
         int len = mappedByteBuffer.position() - 1 - start;
         mappedByteBuffer.reset();
 
@@ -203,7 +220,7 @@ public class FileParser2 {
         //直接计算
         long val = 0;
         int scale = 1;
-        for (int i = len - 1; i >= 0 ; i--) {
+        for (int i = len - 1; i >= 0; i--) {
             val += scale * (bytes[i] - '0');
             scale *= 10;
         }
@@ -211,8 +228,21 @@ public class FileParser2 {
 
     }
 
+    //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
+    private char parseOperation(MappedByteBuffer mappedByteBuffer) {
+        //跳过前缀(58 - 62)
+//        seekForSP(mappedByteBuffer, 5);
+        skipNBytes(mappedByteBuffer, 57);
+        seekForSP(mappedByteBuffer);
 
+        char op = (char) mappedByteBuffer.get();
 
+        //为parsePK做准备
+//        seekForSP(mappedByteBuffer, 2);
+        skipNBytes(mappedByteBuffer, PK_NAME_LEN + 2);
+
+        return op;
+    }
 
 
     //寻找第n个SP，指向SP下个元素
@@ -220,6 +250,11 @@ public class FileParser2 {
         for (int i = 0; i < n; i++) {
             while (mappedByteBuffer.get() != SP) {
             }
+        }
+    }
+
+    private void seekForSP(MappedByteBuffer mappedByteBuffer) {
+        while (mappedByteBuffer.get() != SP) {
         }
     }
 
@@ -244,15 +279,21 @@ public class FileParser2 {
         Collections.sort(pkList);
 
 
-        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(100 * 1024 * 1024);
+        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(40 * 1024 * 1024);
         for (Long pk : pkList) {
             byte[] record = resultMap.get(pk);
             buf.writeBytes(String.valueOf(pk).getBytes());
             for (int i = 0; i < KEY_NUM; i++) {
                 buf.writeByte('\t');
                 int offset = VAL_OFFSET_ARRAY[i];
-                int len = record[offset];
-                buf.writeBytes(record, offset + 1, len);
+                int len = VAL_LEN_ARRAY[i];
+//                int len = record[offset];
+//                buf.writeBytes(record, offset + 1, len);
+                byte b;
+                int n = 0;
+                while((n++ < len) && ((b = record[offset++]) != 0)){
+                    buf.writeByte(b);
+                }
             }
             buf.writeByte('\n');
         }

@@ -14,18 +14,18 @@ interface Cons {
     byte VAL1_OFFSET = 0;
 
     byte VAL2_LEN = 6;
-    byte VAL2_OFFSET = VAl1_LEN + 1;
+    byte VAL2_OFFSET = VAl1_LEN ;
 
     byte VAL3_LEN = 3;
-    byte VAL3_OFFSET = VAl1_LEN + VAL2_LEN + 2;
+    byte VAL3_OFFSET = VAl1_LEN + VAL2_LEN ;
 
     byte VAL4_LEN = 6;
-    byte VAL4_OFFSET = VAl1_LEN + VAL2_LEN + VAL3_LEN + 3;
+    byte VAL4_OFFSET = VAl1_LEN + VAL2_LEN + VAL3_LEN ;
 
     byte VAL5_LEN = 6;
-    byte VAL5_OFFSET = VAl1_LEN + VAL2_LEN + VAL3_LEN + VAL4_LEN + 4;
+    byte VAL5_OFFSET = VAl1_LEN + VAL2_LEN + VAL3_LEN + VAL4_LEN ;
 
-    byte LEN = VAl1_LEN + VAL2_LEN + VAL3_LEN + VAL4_LEN + VAL5_LEN + 5;
+    byte LEN = VAl1_LEN + VAL2_LEN + VAL3_LEN + VAL4_LEN + VAL5_LEN ;
 
     byte[] VAL_LEN_ARRAY = new byte[]{VAl1_LEN,VAL2_LEN,VAL3_LEN,VAL4_LEN,VAL5_LEN};
     byte[] VAL_OFFSET_ARRAY = new byte[]{VAL1_OFFSET,VAL2_OFFSET,VAL3_OFFSET,VAL4_OFFSET,VAL5_OFFSET};
@@ -39,6 +39,7 @@ interface Cons {
     byte KEY4_LEN = 9;
 
     byte KEY5_LEN = 10;
+
 
     byte[] KEY_LEN_ARRAY = new byte[]{KEY1_LEN,KEY2_LEN,KEY3_LEN,KEY4_LEN,KEY5_LEN};
 
