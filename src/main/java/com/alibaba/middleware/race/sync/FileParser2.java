@@ -230,9 +230,9 @@ public class FileParser2 {
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
     private char parseOperation(MappedByteBuffer mappedByteBuffer) {
-        //跳过前缀(58 - 62)
+        //跳过前缀(55 - 62)
 //        seekForSP(mappedByteBuffer, 5);
-        skipNBytes(mappedByteBuffer, 57);
+        skipNBytes(mappedByteBuffer, 54);
         seekForSP(mappedByteBuffer);
 
         char op = (char) mappedByteBuffer.get();
