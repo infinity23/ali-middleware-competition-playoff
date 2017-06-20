@@ -64,17 +64,6 @@ public class FileParser2 {
 
                     //处理主键变更
                     if (pk != newPK) {
-
-                        //复制数组引用并不会复制内容，只能手动复制内容
-//                        byte[] record = resultMap.get(pk);
-//
-//                        if(record == null){
-//                            System.out.println("i");
-//                        }
-//
-//                        byte[] bytes = new byte[record.length];
-//                        System.arraycopy(record,0,bytes,0,record.length);
-
                         resultMap.put(newPK, resultMap.get(pk));
                         resultMap.remove(pk);
                         pk = newPK;
@@ -143,17 +132,17 @@ public class FileParser2 {
 //        skipNBytes(mappedByteBuffer,KEY5_LEN + 6);
 //        fillArray(mappedByteBuffer,record,4);
 
-        //比赛数据
-//        for (int i = 0; i < 5; i++) {
-//            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
-//            fillArray(mappedByteBuffer, record, i);
-//        }
-//
-        //测试数据
-        for (int i = 0; i < 4; i++) {
+//        比赛数据
+        for (int i = 0; i < 5; i++) {
             skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
             fillArray(mappedByteBuffer, record, i);
         }
+
+//        //测试数据
+//        for (int i = 0; i < 4; i++) {
+//            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
+//            fillArray(mappedByteBuffer, record, i);
+//        }
 
         //跳过EN
         mappedByteBuffer.get();
