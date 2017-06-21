@@ -120,21 +120,6 @@ public class FileParser2 {
     //指向SP后
     private void parseInsertKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
 
-//        skipNBytes(mappedByteBuffer,KEY1_LEN + 6);
-//        fillArray(mappedByteBuffer,record,0);
-//
-//        skipNBytes(mappedByteBuffer,KEY2_LEN + 6);
-//        fillArray(mappedByteBuffer,record,1);
-//
-//        skipNBytes(mappedByteBuffer,KEY3_LEN + 6);
-//        fillArray(mappedByteBuffer,record,2);
-//
-//        skipNBytes(mappedByteBuffer,KEY4_LEN + 6);
-//        fillArray(mappedByteBuffer,record,3);
-//
-//        skipNBytes(mappedByteBuffer,KEY5_LEN + 6);
-//        fillArray(mappedByteBuffer,record,4);
-
         for (int i = 0; i < KEY_NUM; i++) {
             skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
             fillArrayInsert(mappedByteBuffer, record, i);
@@ -245,14 +230,6 @@ public class FileParser2 {
     }
 
 
-    //寻找第n个SP，指向SP下个元素
-    private void seekForSP(MappedByteBuffer mappedByteBuffer, int n) {
-        for (int i = 0; i < n; i++) {
-            while (mappedByteBuffer.get() != SP) {
-            }
-        }
-    }
-
     private void seekForSP(MappedByteBuffer mappedByteBuffer) {
         while (mappedByteBuffer.get() != SP) {
         }
@@ -303,6 +280,8 @@ public class FileParser2 {
 
         ChannelFuture future = Server.channel.writeAndFlush(buf);
         future.addListener(ChannelFutureListener.CLOSE);
+
+
 
     }
 }

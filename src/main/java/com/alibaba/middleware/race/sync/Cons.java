@@ -19,7 +19,7 @@ interface Cons {
     byte VAL3_LEN = 3;
     byte VAL3_OFFSET = VAl1_LEN + VAL2_LEN ;
 
-    byte VAL4_LEN = 6;
+    byte VAL4_LEN = 4;
     byte VAL4_OFFSET = VAl1_LEN + VAL2_LEN + VAL3_LEN ;
 
     byte VAL5_LEN = 6;
