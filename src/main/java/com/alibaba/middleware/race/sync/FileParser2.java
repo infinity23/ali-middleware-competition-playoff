@@ -1,5 +1,7 @@
 package com.alibaba.middleware.race.sync;
 
+import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -13,7 +15,6 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
@@ -27,8 +28,12 @@ public class FileParser2 {
     private String table = TABLE;
     private int lo = LO;
     private int hi = HI;
+    private Logger logger = LoggerFactory.getLogger(Server.class);
 
-    private HashMap<Long, byte[]> resultMap = new HashMap<>();
+
+    //    private HashMap<Integer, byte[]> resultMap = new HashMap<>();
+//    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
+    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(2 * 1024 * 1024);
 
 
     public FileParser2() {
@@ -48,7 +53,7 @@ public class FileParser2 {
 
                 char operation = parseOperation(mappedByteBuffer);
 
-                long pk;
+                int pk;
                 if (operation == 'I') {
                     //null|
                     skipNBytes(mappedByteBuffer, 5);
@@ -60,7 +65,7 @@ public class FileParser2 {
                     resultMap.put(pk, record);
                 } else if (operation == 'U') {
                     pk = parsePK(mappedByteBuffer);
-                    long newPK = parsePK(mappedByteBuffer);
+                    int newPK = parsePK(mappedByteBuffer);
 
                     //处理主键变更
                     if (pk != newPK) {
@@ -83,6 +88,8 @@ public class FileParser2 {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        logger.info("map size:" + resultMap.size());
     }
 
 
@@ -187,7 +194,7 @@ public class FileParser2 {
 
 
     // NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private Long parsePK(MappedByteBuffer mappedByteBuffer) {
+    private int parsePK(MappedByteBuffer mappedByteBuffer) {
 
         int start = mappedByteBuffer.position();
         mappedByteBuffer.mark();
@@ -203,7 +210,7 @@ public class FileParser2 {
 //        return Long.valueOf(new String((bytes)));
 
         //直接计算
-        long val = 0;
+        int val = 0;
         int scale = 1;
         for (int i = len - 1; i >= 0; i--) {
             val += scale * (bytes[i] - '0');
@@ -243,11 +250,10 @@ public class FileParser2 {
 
 
     public void showResult() {
-        Logger logger = LoggerFactory.getLogger(Server.class);
 
 
-        List<Long> pkList = new ArrayList<>();
-        for (Long l : resultMap.keySet()) {
+        List<Integer> pkList = new ArrayList<>();
+        for (int l : resultMap.keySet()) {
             if (l <= lo || l >= hi) {
                 continue;
             }
@@ -257,7 +263,7 @@ public class FileParser2 {
 
 
         ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(40 * 1024 * 1024);
-        for (Long pk : pkList) {
+        for (int pk : pkList) {
             byte[] record = resultMap.get(pk);
             buf.writeBytes(String.valueOf(pk).getBytes());
             for (int i = 0; i < KEY_NUM; i++) {
