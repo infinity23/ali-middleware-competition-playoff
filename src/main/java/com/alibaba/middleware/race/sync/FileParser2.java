@@ -31,9 +31,9 @@ public class FileParser2 {
     private Logger logger = LoggerFactory.getLogger(Server.class);
 
 
-    //    private HashMap<Integer, byte[]> resultMap = new HashMap<>();
+//        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
-    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(2 * 1024 * 1024);
+    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
 
 
     public FileParser2() {
@@ -89,7 +89,6 @@ public class FileParser2 {
             e.printStackTrace();
         }
 
-        logger.info("map size:" + resultMap.size());
     }
 
 
@@ -181,7 +180,7 @@ public class FileParser2 {
             record[i++] = b;
         }
 
-        while(i < offset + len){
+        while (i < offset + len) {
             record[i++] = 0;
         }
 
@@ -196,28 +195,17 @@ public class FileParser2 {
     // NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
     private int parsePK(MappedByteBuffer mappedByteBuffer) {
 
-        int start = mappedByteBuffer.position();
-        mappedByteBuffer.mark();
-        seekForSP(mappedByteBuffer);
-        int len = mappedByteBuffer.position() - 1 - start;
-        mappedByteBuffer.reset();
-
-        byte[] bytes = new byte[len];
-        mappedByteBuffer.get(bytes);
-        mappedByteBuffer.get();
-
 //      转为String
 //        return Long.valueOf(new String((bytes)));
 
         //直接计算
         int val = 0;
-        int scale = 1;
-        for (int i = len - 1; i >= 0; i--) {
-            val += scale * (bytes[i] - '0');
-            scale *= 10;
+        byte b;
+        while ((b = mappedByteBuffer.get()) != SP) {
+            val = val * 10 + b - CHAR_ZERO;
         }
-        return val;
 
+        return val;
     }
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
@@ -274,7 +262,7 @@ public class FileParser2 {
 //                buf.writeBytes(record, offset + 1, len);
                 byte b;
                 int n = 0;
-                while((n++ < len) && ((b = record[offset++]) != 0)){
+                while ((n++ < len) && ((b = record[offset++]) != 0)) {
                     buf.writeByte(b);
                 }
             }
@@ -282,11 +270,10 @@ public class FileParser2 {
         }
 
         //log
-        logger.info("result 大小： " + buf.readableBytes());
+//        logger.info("result 大小： " + buf.readableBytes());
 
         ChannelFuture future = Server.channel.writeAndFlush(buf);
         future.addListener(ChannelFutureListener.CLOSE);
-
 
 
     }
