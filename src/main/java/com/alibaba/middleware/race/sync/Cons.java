@@ -4,7 +4,8 @@ import java.util.HashMap;
 
 interface Cons {
 
-
+    // '0'
+    byte CHAR_ZERO = 48;
 
     //实际长度|VAL_LEN
 
