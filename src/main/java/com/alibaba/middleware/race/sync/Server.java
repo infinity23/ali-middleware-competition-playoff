@@ -40,12 +40,12 @@ public class Server {
 
     public static void main(String[] args) throws InterruptedException {
         initProperties();
-        printInput(args);
+//        printInput(args);
 
-        schema = args[0];
-        table = args[1];
-        start = Integer.parseInt(args[2]);
-        end = Integer.parseInt(args[3]);
+//        schema = args[0];
+//        table = args[1];
+//        start = Integer.parseInt(args[2]);
+//        end = Integer.parseInt(args[3]);
 
         Logger logger = LoggerFactory.getLogger(Server.class);
 
