@@ -1,181 +1,257 @@
-package com.alibaba.middleware.race.sync;/*
 package com.alibaba.middleware.race.sync;
 
+import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
+import static com.alibaba.middleware.race.sync.Cons.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
 
 //多线程正读
 public class FileParser5 {
-    private String schema;
-    private String table;
-    private int lo;
-    private int hi;
-    private ExecutorService executorService = Executors.newCachedThreadPool();
-    private List<Future<Result>> futureList = new ArrayList<>();
-
-    private final static int BLOCK_SIZE = 200 * 1024 * 1024;
-
-    private HashMap<Long, FilePointer> insertMapAll = new HashMap<>();
-    private HashMap<Long, HashMap<Byte, FilePointer>> updateMapAll = new HashMap<>();
-    private HashSet<Long> deleteSetAll = new HashSet<>();
+    private String schema = SCHEMA;
+    private String table = TABLE;
+    private int lo = LO;
+    private int hi = HI;
+    private Logger logger = LoggerFactory.getLogger(Server.class);
 
 
-    public void readPages() {
+    //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
+//    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
+    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap();
+    private boolean mergeResultStart;
+    private boolean readFinish;
 
-        try {
-            for (int i = 0; i < 10; i++) {
-                FileChannel fileChannel = new RandomAccessFile(DATA_HOME + i + ".txt", "r").getChannel();
-                MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
-                Future<Result> future = executorService.submit(new Task(mappedByteBuffer, (byte) i));
-                futureList.add(future);
+    public FileParser5() {
+        System.getProperties().put("file.encoding", "UTF-8");
+        System.getProperties().put("file.decoding", "UTF-8");
+
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                mergeResult();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        });
 
     }
 
-    private void mergeResult() {
 
+    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(5);
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
-        Result[] results = new Result[futureList.size()];
+    public void readPages() {
         try {
-            for (int i = 0; i < futureList.size(); i++) {
-                results[i] = futureList.get(i).get();
+            for (int i = 1; i <= 10; i++) {
+                RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
+                byte[] data = new byte[(int) randomAccessFile.length()];
+                randomAccessFile.read(data);
+
+                int index = 0;
+                while (true) {
+                    int start = index;
+                    index += BLOCK_SIZE;
+                    while (data[index++] != EN) {
+                    }
+                    int len = index - start;
+                    futureList.put(executorService.submit(new Task(data, start, len)));
+
+                    if (data.length - index < BLOCK_SIZE) {
+                        futureList.put(executorService.submit(new Task(data, index, data.length - index)));
+                        break;
+                    }
+                }
+
+            logger.info("fileParser has read " + i);
             }
-        } catch (InterruptedException | ExecutionException e) {
+
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
+        readFinish = true;
 
-        for (int i = 0; i < results.length; i++) {
-            HashMap<Long, FilePointer> insertMap = results[i].getInsertMap();
-            HashMap<Long, HashMap<Byte, FilePointer>> updateMap = results[i].getUpdateMap();
-            HashSet<Long> deleteSet = results[i].getDeleteSet();
+    }
 
-            //变更主键处理
-            if (i < results.length - 1) {
-                LinkedHashMap<Long, Long> PKChangeMap = results[i + 1].getPKChangeMap();
-                for (Map.Entry<Long, Long> entry : PKChangeMap.entrySet()) {
-                    long oldPK = entry.getKey();
-                    long newPK = entry.getValue();
-                    if (insertMap.containsKey(oldPK)) {
-                        insertMap.put(newPK, insertMap.get(oldPK));
-                        insertMap.remove(oldPK);
-                        updateMap.put(newPK, updateMap.get(oldPK));
-                        updateMap.remove(oldPK);
+
+    public void mergeResult() {
+
+//        HashIntObjMap<byte[]> insertMapAll = HashIntObjMaps.newMutableMap();
+//        LinkedHashMap<Integer, byte[]> updateMapAll = new LinkedHashMap<>();
+//        HashIntSet deleteSetAll = HashIntSets.newMutableSet();
+
+//        int n = futureList.size();
+//        Result[] results = new Result[n];
+//
+//        try {
+//            for (int i = 0; i < n; i++) {
+//                results[i] = futureList.poll().get();
+//            }
+//        } catch (InterruptedException | ExecutionException e) {
+//            e.printStackTrace();
+//        }
+
+
+        Result result = null;
+        while (true) {
+            try {
+                if (!readFinish) {
+                    result = futureList.take().get();
+                } else {
+                    Future<Result> future = futureList.poll();
+                    if (future == null) {
+                        break;
                     }
+                    result = future.get();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+
+            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
+            LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
+            LinkedList<Integer> deleteList = result.getDeleteSet();
+            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
+
+            //先处理PK变更
+            for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
+                int pk = entry.getKey();
+                int newPk = entry.getValue();
+
+                resultMap.put(newPk, resultMap.get(pk));
+                resultMap.remove(pk);
+            }
+
+
+            //处理update
+            resultMap.putAll(insertMap);
+            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
+                int pk = entry.getKey();
+                byte[] update = entry.getValue();
+                byte[] record = resultMap.get(pk);
+
+
+                for (int j = 0; j < KEY_NUM; j++) {
+                    int offset = VAL_OFFSET_ARRAY[j];
+                    if (update[offset] == 0) {
+                        continue;
+                    }
+                    int len = VAL_LEN_ARRAY[j];
+                    System.arraycopy(update, offset, record, offset, len);
                 }
             }
 
-            insertMapAll.putAll(insertMap);
-            updateMapAll.putAll(updateMap);
-            deleteSetAll.addAll(deleteSet);
+            //处理delete
+            while (!deleteList.isEmpty()) {
+                int pk = deleteList.poll();
+                resultMap.remove(pk);
+            }
+
         }
 
-        for (long l : deleteSetAll) {
-            if (insertMapAll.containsKey(l)) {
-                insertMapAll.remove(l);
-                updateMapAll.remove(l);
-                deleteSetAll.remove(l);
-            } else if (updateMapAll.containsKey(l)) {
-                updateMapAll.remove(l);
-                deleteSetAll.remove(l);
-            }
+        synchronized (this) {
+            notifyAll();
         }
+
+
+//            //变更主键处理
+//            if (i < results.length - 1) {
+//                LinkedHashMap<Integer, Integer> PKChangeMap = results[i + 1].getPKChangeMap();
+//                for (Map.Entry<Integer, Integer> entry : PKChangeMap.entrySet()) {
+//                    int oldPK = entry.getKey();
+//                    int newPK = entry.getValue();
+//                    if (insertMap.containsKey(oldPK)) {
+//                        insertMap.put(newPK, insertMap.get(oldPK));
+//                        insertMap.remove(oldPK);
+//                        updateMap.put(newPK, updateMap.get(oldPK));
+//                        updateMap.remove(oldPK);
+//                    }
+//                }
+//            }
+//
+//            resultMap.putAll(insertMap);
+////            updateMapAll.putAll(updateMap);
+//            for (Map.Entry<Integer,byte[]> entry : updateMap.entrySet()){
+//                updateMapAll.put(entry.getKey(),entry.getValue());
+//            }
+//            deleteSetAll.addAll(deleteSet);
+//        }
+//
+//        for (int i : deleteSetAll) {
+//            insertMapAll.remove(i);
+//            updateMapAll.remove(i);
+//        }
+//
+//        for (Map.Entry<Integer,byte[]> entry : updateMapAll.entrySet()){
+//            int pk = entry.getKey();
+//            byte[] update = entry.getValue();
+//            byte[] insert = resultMap.get(pk);
+//
+//            for (int i = 0; i < LEN; i++) {
+//                if(update[i] != 0){
+//                    insert[i] = update[i];
+//                }
+//            }
 
     }
-
 
     public void showResult() {
 
-        try {
-
-            LinkedHashMap<Byte, byte[]> keyValue = new LinkedHashMap<>(KEYMAP.size());
-
-            HashMap<Integer, ByteBuf> resultMap = new HashMap<>();
-            ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(100 * 1024 * 1024);
-
-            for (Map.Entry<Long, FilePointer> entry : insertMapAll.entrySet()) {
-                long pk = entry.getKey();
-                if (pk <= lo || pk >= hi) {
-                    continue;
-                }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                rowIndex = 0;
-
-                int p = entry.getValue();
-                mappedByteBuffer.position(p);
-                mappedByteBuffer.get(bytes);
-                parsKeyValue(bytes, keyValue);
-
-                HashMap<Byte, byte[]> updates = updateMap.get(pk);
-                ByteBuf rowBuf = ByteBufAllocator.DEFAULT.buffer(MAX_KEYVALUE_SIZE);
-
-                for (Map.Entry<Byte, byte[]> updateEntry : updates.entrySet()) {
-                    keyValue.put(updateEntry.getKey(), updateEntry.getValue());
-                }
-
-                rowBuf.writeBytes(String.valueOf(pk).getBytes());
-                for (Map.Entry<Byte, byte[]> e : keyValue.entrySet()) {
-                    rowBuf.writeByte('\t');
-                    rowBuf.writeBytes(e.getValue());
-                }
-                rowBuf.writeByte('\n');
-                resultMap.put((int) pk, rowBuf);
+        synchronized (this) {
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-
-
-            ArrayList<Integer> pks = new ArrayList<>(resultMap.keySet());
-            Collections.sort(pks);
-
-            for (Integer pk : pks) {
-                Server.channel.write(resultMap.get(pk));
-                buf.writeBytes(resultMap.get(pk));
-            }
-
-            //log
-            logger.info("result 大小： " + buf.readableBytes());
-
-            ChannelFuture future = Server.channel.writeAndFlush(buf);
-            future.addListener(ChannelFutureListener.CLOSE);
-
-            buf.release();
-            randomAccessFile.close();
-        } catch (IOException e) {
-            logger.error("showResult error", e);
         }
+
+
+        List<Integer> pkList = new ArrayList<>();
+        for (int l : resultMap.keySet()) {
+            if (l <= lo || l >= hi) {
+                continue;
+            }
+            pkList.add(l);
+        }
+        Collections.sort(pkList);
+
+        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(40 * 1024 * 1024);
+        for (int pk : pkList) {
+            byte[] record = resultMap.get(pk);
+            buf.writeBytes(String.valueOf(pk).getBytes());
+            for (int i = 0; i < KEY_NUM; i++) {
+                buf.writeByte('\t');
+                int offset = VAL_OFFSET_ARRAY[i];
+                int len = VAL_LEN_ARRAY[i];
+//                int len = record[offset];
+//                buf.writeBytes(record, offset + 1, len);
+                byte b;
+                int n = 0;
+                while ((n++ < len) && ((b = record[offset++]) != 0)) {
+                    buf.writeByte(b);
+                }
+            }
+            buf.writeByte('\n');
+        }
+
+        //log
+//        logger.info("result 大小： " + buf.readableBytes());
+
+        ChannelFuture future = Server.channel.writeAndFlush(buf);
+        future.addListener(ChannelFutureListener.CLOSE);
+
+
     }
 
 
 }
-*/

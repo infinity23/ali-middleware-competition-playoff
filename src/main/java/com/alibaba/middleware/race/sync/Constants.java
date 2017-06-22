@@ -13,7 +13,7 @@ interface Constants {
     byte CO = 58;
 
     // ------------ 本地测试可以使用自己的路径--------------//
-//    //     工作主目录
+////         工作主目录
 //     String TESTER_HOME = "E:\\Major\\IncrementalSync\\example";
 ////     赛题数据
 //    String DATA_HOME = "E:\\Major\\IncrementalSync\\example\\";
@@ -26,6 +26,8 @@ interface Constants {
 //    String TABLE = "student";
 //    int LO = 100;
 //    int HI = 200;
+//    int BLOCK_SIZE = 20 * 1024 * 1024;
+
 
 
 //    //     工作主目录
@@ -42,12 +44,14 @@ interface Constants {
 //    String TABLE = "student";
 //    int LO = 100000;
 //    int HI = 2000000;
+//    int BLOCK_SIZE = 100 * 1024 * 1024;
 
 
 //
 //    int KEY_NUM = 4;
 //    //后缀 keys43 + nulls16 + |12 + 5 + values最小（3 + 3 + 3 + score(1) ）10
 //    int SUFFIX = 86;
+//
 
 
 
@@ -56,6 +60,7 @@ interface Constants {
 
     // ------------ 正式比赛指定的路径--------------//
 
+
     //    middleware8 student 1000000 8000000
     String SCHEMA = "middleware8";
     String TABLE = "student";
@@ -63,6 +68,7 @@ interface Constants {
     int HI = 8000000;
 
     int KEY_NUM = 5;
+    int BLOCK_SIZE = 100 * 1024 * 1024;
 
 //    后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
     int SUFFIX = 104;

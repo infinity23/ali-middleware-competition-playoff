@@ -1,5 +1,7 @@
 package com.alibaba.middleware.race.sync;
 
+import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -13,7 +15,6 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
@@ -21,7 +22,6 @@ import static com.alibaba.middleware.race.sync.Constants.*;
 
 
 //直接解析为数据集，不进行预处理
-//内存会爆
 public class FileParser2 {
     private String schema = SCHEMA;
     private String table = TABLE;
@@ -30,9 +30,9 @@ public class FileParser2 {
     private Logger logger = LoggerFactory.getLogger(Server.class);
 
 
-        private HashMap<Integer, byte[]> resultMap = new HashMap<>(5000000);
+//        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
-//    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
+    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
 
 
     public FileParser2() {

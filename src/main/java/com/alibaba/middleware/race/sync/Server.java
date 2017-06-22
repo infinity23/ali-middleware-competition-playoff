@@ -111,7 +111,11 @@ public class Server {
             Logger logger = LoggerFactory.getLogger(Server.class);
 
             long parseStart = System.currentTimeMillis();
-            parseFile();
+            try {
+                parseFile();
+            }catch (Exception e){
+                logger.error("parseFile error",e);
+            }
             long parseEnd = System.currentTimeMillis();
             logger.info("parseFile time: " + (parseEnd - parseStart));
 
@@ -131,12 +135,15 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser2 fileParser = new FileParser2();
+        FileParser5 fileParser = new FileParser5();
 
-        for (int i = 1; i <= 10; i++) {
-            fileParser.readPage((byte) i);
-            logger.info("fileParser has read " + i);
-        }
+//        for (int i = 1; i <= 10; i++) {
+//            fileParser.readPage((byte) i);
+//            logger.info("fileParser has read " + i);
+//        }
+
+        fileParser.readPages();
+
         logger.info("start showResult...");
         fileParser.showResult();
         logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);

@@ -1,197 +1,263 @@
 package com.alibaba.middleware.race.sync;
 
-import java.nio.MappedByteBuffer;
-import java.util.HashMap;
-import java.util.HashSet;
+import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
+
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.concurrent.Callable;
 
-import static com.alibaba.middleware.race.sync.Cons.KEYMAP;
+import static com.alibaba.middleware.race.sync.Cons.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
 public class Task implements Callable<Result>{
-    private MappedByteBuffer mappedByteBuffer;
-    HashMap<Long, HashMap<Byte, FilePointer>> updateMap = new HashMap<>();
-    HashSet<Long> deleteSet = new HashSet<>();
-    HashMap<Long, FilePointer> insertMap = new HashMap<>();
-    LinkedHashMap<Long, Long> PKChangeMap = new LinkedHashMap<>();
+//    private MappedByteBuffer mappedByteBuffer;
+//    HashMap<Long, HashMap<Byte, FilePointer>> updateMap = new HashMap<>();
+//    HashSet<Long> deleteSet = new HashSet<>();
+//    HashMap<Long, FilePointer> insertMap = new HashMap<>();
+//    LinkedHashMap<Long, Long> PKChangeMap = new LinkedHashMap<>();
 
-    private int rowIndex;
-    private int insertIndex;
-    private byte page;
+    private byte[] data;
+    private int start;
+    private int len;
 
-    public Task(MappedByteBuffer mappedByteBuffert, byte page) {
-        this.page = page;
-        this.mappedByteBuffer = mappedByteBuffer;
+    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap();
+    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
+    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
+    private LinkedList<Integer> deleteList = new LinkedList<>();
+
+
+    public Task(byte[] data, int start, int len) {
+        this.data = data;
+        this.start = start;
+        this.len = len;
     }
 
     @Override
     public Result call() throws Exception {
         read();
-        return new Result(insertMap,updateMap,deleteSet,PKChangeMap);
+        return new Result(insertMap,updateMap,PKChangeMap,deleteList);
     }
 
+
+    private int index;
     public void read() {
 
-            while (mappedByteBuffer.hasRemaining()) {
+            index = start;
+            while (index < start + len) {
 
-                int p = mappedByteBuffer.position();
-                mappedByteBuffer.position(p);
-                mappedByteBuffer.mark();
-                seekForEN(mappedByteBuffer);
-                int e = mappedByteBuffer.position();
-                mappedByteBuffer.reset();
+                char operation = parseOperation(data);
 
-                byte[] bytes = new byte[e - p];
-                mappedByteBuffer.get(bytes);
-
-                char operation = parseOperation(bytes);
-
-                Long pk;
+                int pk;
                 if (operation == 'I') {
-                    pk = parsePK(bytes, 2);
-                    int len = bytes.length - rowIndex;
+                    //null|
+                    skipNBytes(data, 5);
 
-                    insertMap.put(pk, new FilePointer(insertIndex, len, page));
-                    //最小化内存
-                    updateMap.put(pk, new HashMap<Byte,FilePointer>(5,1));
-                    insertIndex += len;
+                    pk = parsePK(data);
+
+                    byte[] record = new byte[LEN];
+
+                    parseInsertKeyValue(data, record);
+
+                    insertMap.put(pk, record);
 
                 } else if (operation == 'U') {
-                    pk = parsePK(bytes, 1);
-                    long newPK = parsePK(bytes, 1);
+                    pk = parsePK(data);
+                    int newPK = parsePK(data);
+
 
                     //处理主键变更
                     if (pk != newPK) {
-                        PKChangeMap.put(pk,newPK);
-                        updateMap.put(newPK, updateMap.get(pk));
-                        updateMap.remove(pk);
-                        insertMap.put(newPK, insertMap.get(pk));
-                        insertMap.remove(pk);
 
-                        if (rowIndex == bytes.length - 1) {
-                            rowIndex = 0;
-                            continue;
+                        PKChangeMap.put(pk,newPK);
+                        if(updateMap.containsKey(pk)) {
+                            updateMap.put(newPK, updateMap.get(pk));
+                            updateMap.remove(pk);
+                        }
+                        if(insertMap.containsKey(pk)) {
+                            insertMap.put(newPK, insertMap.get(pk));
+                            insertMap.remove(pk);
                         }
 
                         pk = newPK;
                     }
 
-                    parsKeyValueByIdx(bytes, updateMap.get(pk));
+                    if(insertMap.containsKey(pk)){
+                        parseUpdateKeyValue(data, insertMap.get(pk));
+                        continue;
+                    }
+
+                    byte[] update;
+                    if(!updateMap.containsKey(pk)){
+                        update = new byte[LEN];
+                        updateMap.put(pk,update);
+                    }else{
+                        update = updateMap.get(pk);
+                    }
+                    parseUpdateKeyValue(data, update);
 
                 } else {
-                    pk = parsePK(bytes, 1);
+                    pk = parsePK(data);
+
                     if(insertMap.containsKey(pk)) {
                         insertMap.remove(pk);
                         updateMap.remove(pk);
                     }else {
-                        deleteSet.add(pk);
+                        deleteList.add(pk);
                     }
+
+                    //跳过剩余
+                    skipNBytes(data, SUFFIX);
+                    seekForEN(data);
                 }
 
-                rowIndex = 0;
             }
     }
 
 
-    //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private char parseOperation(byte[] bytes) {
-        //跳过前缀
-        for (int i = 0; i < 5; i++) {
-            while (bytes[rowIndex] != SP) {
-                rowIndex++;
+    // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
+    private void parseUpdateKeyValue(byte[] data, byte[] record) {
+        while (true) {
+            int start = index;
+            if (data[index++] == EN) {
+                break;
             }
-            rowIndex++;
-        }
-        char op = (char) bytes[rowIndex];
-
-        //为parsePK做准备
-        for (int i = 0; i < 2; i++) {
-            while (bytes[rowIndex] != SP) {
-                rowIndex++;
+            seekForSP(data);
+            int len = index - 1 - start;
+            seekForSP(data);
+            switch (len) {
+                case KEY1_LEN:
+                    fillArray(data, record, 0);
+                    break;
+                case KEY2_LEN:
+                    fillArray(data, record, 1);
+                    break;
+                case KEY3_LEN:
+                    fillArray(data, record, 2);
+                    break;
+                case KEY4_LEN:
+                    fillArray(data, record, 3);
+                    break;
+                case KEY5_LEN:
+                    fillArray(data, record, 4);
+                    break;
             }
-            rowIndex++;
         }
-        return op;
     }
+
+    // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
+    //指向SP后
+    private void parseInsertKeyValue(byte[] data, byte[] record) {
+
+        for (int i = 0; i < KEY_NUM; i++) {
+            skipNBytes(data, KEY_LEN_ARRAY[i] + 6);
+            fillArrayInsert(data, record, i);
+        }
+
+        //跳过EN
+        index++;
+    }
+
+    //将value填入数组，指向SP后
+    private void fillArrayInsert(byte[] data, byte[] record, int val) {
+//        byte b;
+//        byte offset = VAL_OFFSET_ARRAY[val];
+//        //预留一个byte的长度
+//        int i = offset + 1;
+//        while ((b = mappedByteBuffer.get()) != SP) {
+//            record[i++] = b;
+//        }
+//
+//        //计算长度
+//        record[offset] = (byte) (i - offset - 1);
+
+        byte b;
+
+        int i = VAL_OFFSET_ARRAY[val];
+        while ((b = data[index++]) != SP) {
+            record[i++] = b;
+        }
+
+    }
+
+    private void fillArray(byte[] data, byte[] record, int val) {
+//        byte b;
+//        byte offset = VAL_OFFSET_ARRAY[val];
+//        //预留一个byte的长度
+//        int i = offset + 1;
+//        while ((b = mappedByteBuffer.get()) != SP) {
+//            record[i++] = b;
+//        }
+//
+//        //计算长度
+//        record[offset] = (byte) (i - offset - 1);
+
+
+        //不记len清零法
+        byte b;
+        byte offset = VAL_OFFSET_ARRAY[val];
+        byte len = VAL_LEN_ARRAY[val];
+
+        int i = offset;
+        while ((b = data[index++]) != SP) {
+            record[i++] = b;
+        }
+
+        while (i < offset + len) {
+            record[i++] = 0;
+        }
+
+
+    }
+
+    private void skipNBytes(byte[] data, int n) {
+        index += n;
+    }
+
 
     // NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private Long parsePK(byte[] bytes, int n) {
-        int start = 0;
-        for (int i = 0; i < n; i++) {
-            start = rowIndex;
-            while (bytes[rowIndex] != SP) {
-                rowIndex++;
-            }
-            rowIndex++;
-        }
+    private int parsePK(byte[] data) {
 
-        long val = 0;
-        int scale = 1;
-        for (int i = rowIndex - 2; i >= start; i--) {
-            val += (bytes[i] - '0') * scale;
-            scale *= 10;
+//      转为String
+//        return Long.valueOf(new String((bytes)));
+
+        //直接计算
+        int val = 0;
+        byte b;
+        while ((b = data[index++]) != SP) {
+            val = val * 10 + b - CHAR_ZERO;
         }
 
         return val;
     }
 
+    //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
+    private char parseOperation(byte[] data) {
+        //跳过前缀(55 - 62)
+//        seekForSP(mappedByteBuffer, 5);
+        skipNBytes(data, 54);
+        seekForSP(data);
 
-    // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private void parsKeyValueByIdx(byte[] bytes, HashMap<Byte, FilePointer> update) {
-        int start = 0;
-        int end = 0;
+        char op = (char) data[index++];
 
-        while (rowIndex < bytes.length - 1) {
-            start = rowIndex;
-            SkipSP(bytes);
-            end = rowIndex - 1;
-            byte[] key = copyArray(bytes, start, end);
+        //为parsePK做准备
+//        seekForSP(mappedByteBuffer, 2);
+        skipNBytes(data, PK_NAME_LEN + 2);
 
-            SkipSP(bytes);
-            start = rowIndex;
-            SkipSP(bytes);
-            end = rowIndex - 1;
-//            byte[] value = copyArray(bytes, start, end);
+        return op;
+    }
 
-            FilePointer pointer = new FilePointer(start,end - start,page);
-            update.put(KEYMAP.get(key[4] + key[5]), pointer);
+
+    private void seekForSP(byte[] data) {
+        while (data[index++] != SP) {
         }
     }
-
-    private byte[] copyArray(byte[] bytes, int start, int end) {
-        byte[] newArray = new byte[end - start];
-        System.arraycopy(bytes, start, newArray, 0, newArray.length);
-        return newArray;
-    }
-
-    //跳过n个SP，指向下一个元素
-    private void SkipSP(byte[] bytes) {
-        while (bytes[rowIndex] != SP) {
-            rowIndex++;
-        }
-        rowIndex++;
-    }
-
-
 
     //寻找下个EN，指向下个元素
-    private void seekForEN(MappedByteBuffer mappedByteBuffer) {
-        //保险起见，先跳70个字节
-        mappedByteBuffer.position(mappedByteBuffer.position() + 70);
-        while (mappedByteBuffer.get() != EN) {
+    private void seekForEN(byte[] data) {
+        while (data[index++] != EN) {
         }
     }
-
-
-
-
-
-
-
-
-
-
 
 
 }
