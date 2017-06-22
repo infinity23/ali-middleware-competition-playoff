@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
-import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -32,7 +31,8 @@ public class FileParser5 {
 
     //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
-    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap();
+//    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap();
+    private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>();
     private boolean mergeResultStart;
     private boolean readFinish;
 
@@ -40,20 +40,26 @@ public class FileParser5 {
         System.getProperties().put("file.encoding", "UTF-8");
         System.getProperties().put("file.decoding", "UTF-8");
 
-        executorService.execute(new Runnable() {
-            @Override
-            public void run() {
-                mergeResult();
-            }
-        });
+//        executorService.execute(new Runnable() {
+//            @Override
+//            public void run() {
+//                Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+//                long start = System.currentTimeMillis();
+//                mergeResult();
+//                long end = System.currentTimeMillis();
+//                logger.info("mergeResult time: " + (end - start));
+//            }
+//        });
 
     }
 
 
-    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
+//    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM - 1);
+    private LinkedList<Future<Result>> futureList = new LinkedList<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void readPages() {
+        long startTime = System.currentTimeMillis();
         try {
             for (int i = 1; i <= 10; i++) {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
@@ -106,13 +112,15 @@ public class FileParser5 {
                         while (data[index++] != EN) {
                         }
                         int len = index - start;
-                        futureList.put(executorService.submit(new Task(data, start, len)));
+                        futureList.add(executorService.submit(new Task(data, start, len, resultMap)));
 
                         if (actualLen - index < block) {
-                            futureList.put(executorService.submit(new Task(data, index, actualLen - index)));
+                            futureList.add(executorService.submit(new Task(data, index, actualLen - index, resultMap)));
                             break;
                         }
                     }
+
+                    mergeResult();
 
                 }
 
@@ -120,11 +128,14 @@ public class FileParser5 {
 
             }
 
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
         readFinish = true;
+        long endTime = System.currentTimeMillis();
+
+        logger.info("readPages time: " + (endTime - startTime));
 
     }
 
@@ -148,20 +159,29 @@ public class FileParser5 {
 
 
         Result result = null;
-        while (true) {
+//        while (true) {
+//            try {
+//                if (!readFinish) {
+//                    result = futureList.take().get();
+//                } else {
+//                    Future<Result> future = futureList.poll();
+//                    if (future == null) {
+//                        break;
+//                    }
+//                    result = future.get();
+//                }
+//            } catch (InterruptedException | ExecutionException e) {
+//                e.printStackTrace();
+//            }
+
+        while(!futureList.isEmpty()){
+
             try {
-                if (!readFinish) {
-                    result = futureList.take().get();
-                } else {
-                    Future<Result> future = futureList.poll();
-                    if (future == null) {
-                        break;
-                    }
-                    result = future.get();
-                }
+                result = futureList.poll().get();
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
+
 
             HashIntObjMap<byte[]> insertMap = result.getInsertMap();
             LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
@@ -179,7 +199,9 @@ public class FileParser5 {
 
 
             //处理update
-            resultMap.putAll(insertMap);
+//            resultMap.putAll(insertMap);
+
+
             for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
                 int pk = entry.getKey();
                 byte[] update = entry.getValue();
@@ -204,9 +226,9 @@ public class FileParser5 {
 
         }
 
-        synchronized (this) {
-            notifyAll();
-        }
+//        synchronized (this) {
+//            notifyAll();
+//        }
 
 
 //            //变更主键处理
@@ -252,13 +274,13 @@ public class FileParser5 {
 
     public void showResult() {
 
-        synchronized (this) {
-            try {
-                this.wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+//        synchronized (this) {
+//            try {
+//                this.wait();
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
 
 
         List<Integer> pkList = new ArrayList<>();
