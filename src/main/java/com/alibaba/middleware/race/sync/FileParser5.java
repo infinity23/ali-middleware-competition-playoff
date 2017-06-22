@@ -54,8 +54,7 @@ public class FileParser5 {
 
     }
 
-
-    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM - 1);
+    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
 //    private LinkedList<Future<Result>> futureList = new LinkedList<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
