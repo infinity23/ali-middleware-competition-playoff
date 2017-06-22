@@ -12,6 +12,8 @@ interface Constants {
     //':'
     byte CO = 58;
 
+    int DIRECT_CACHE = 200 * 1024 * 1024;
+
     // ------------ 本地测试可以使用自己的路径--------------//
 ////         工作主目录
 //     String TESTER_HOME = "E:\\Major\\IncrementalSync\\example";
@@ -29,10 +31,9 @@ interface Constants {
 //    int BLOCK_SIZE = 20 * 1024 * 1024;
 
 
-
 //    //     工作主目录
-//     String TESTER_HOME = "E:\\Major\\IncrementalSync\\";
-////     赛题数据
+//    String TESTER_HOME = "E:\\Major\\IncrementalSync\\";
+//    //     赛题数据
 //    String DATA_HOME = "E:\\Major\\IncrementalSync\\last\\";
 //    // 结果文件目录
 //    String RESULT_HOME = "E:\\Major\\IncrementalSync\\result\\";
@@ -45,21 +46,16 @@ interface Constants {
 //    int LO = 100000;
 //    int HI = 2000000;
 //    int BLOCK_SIZE = 100 * 1024 * 1024;
-
-
+//    int CACHE_SIZE = 200 * 1024 * 1024;
+//    int THREAD_NUM = 4;
+//
 //
 //    int KEY_NUM = 4;
 //    //后缀 keys43 + nulls16 + |12 + 5 + values最小（3 + 3 + 3 + score(1) ）10
 //    int SUFFIX = 86;
-//
-
-
-
-
 
 
     // ------------ 正式比赛指定的路径--------------//
-
 
     //    middleware8 student 1000000 8000000
     String SCHEMA = "middleware8";
@@ -69,8 +65,10 @@ interface Constants {
 
     int KEY_NUM = 5;
     int BLOCK_SIZE = 100 * 1024 * 1024;
+    int CACHE_SIZE = 200 * 1024 * 1024;
+    int THREAD_NUM = 16;
 
-//    后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
+    //后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
     int SUFFIX = 104;
 
     // server端口
@@ -87,11 +85,11 @@ interface Constants {
     // 工作主目录
     String TESTER_HOME = "/home/admin";
     // 赛题数据
-     String DATA_HOME = "/home/admin/canal_data/";
+    String DATA_HOME = "/home/admin/canal_data/";
     // 结果文件目录(client端会用到)
     String RESULT_HOME = "/home/admin/sync_results/76870yg5no/";
     // 中间结果目录（client和server都会用到）
-     String MIDDLE_HOME = "/home/admin/middle/76870yg5no/";
+    String MIDDLE_HOME = "/home/admin/middle/76870yg5no/";
 
 
 }

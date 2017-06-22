@@ -11,15 +11,18 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 import java.util.*;
 import java.util.concurrent.*;
 
-import static com.alibaba.middleware.race.sync.Cons.*;
+import static com.alibaba.middleware.race.sync.Cons.VAL_LEN_ARRAY;
+import static com.alibaba.middleware.race.sync.Cons.VAL_OFFSET_ARRAY;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
 
 //多线程正读
 public class FileParser5 {
+    //    private static final int BLOCK_SIZE = 200 * 1024 * 1024;
     private String schema = SCHEMA;
     private String table = TABLE;
     private int lo = LO;
@@ -47,32 +50,74 @@ public class FileParser5 {
     }
 
 
-    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(5);
+    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void readPages() {
         try {
             for (int i = 1; i <= 10; i++) {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
-                byte[] data = new byte[(int) randomAccessFile.length()];
-                randomAccessFile.read(data);
+                FileChannel fileChannel = randomAccessFile.getChannel();
 
-                int index = 0;
-                while (true) {
-                    int start = index;
-                    index += BLOCK_SIZE;
-                    while (data[index++] != EN) {
-                    }
-                    int len = index - start;
-                    futureList.put(executorService.submit(new Task(data, start, len)));
+                int MP = 0;
+                boolean readOne = false;
+                while (!readOne) {
+//                    MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, MP, DIRECT_CACHE - 200);
+//                    byte[] data = new byte[DIRECT_CACHE - 200];
+//                    mappedByteBuffer.mark();
+//                    mappedByteBuffer.position(199 * 1024 * 1024);
+//                    while (mappedByteBuffer.get() != EN) {
+//                    }
+//                    int mlen = mappedByteBuffer.position() - MP;
+//
+//                    MP += mappedByteBuffer.position();
+//
+//                    byte[] data = new byte[mlen];
+//                    mappedByteBuffer.reset();
+//                    mappedByteBuffer.get(data);
 
-                    if (data.length - index < BLOCK_SIZE) {
-                        futureList.put(executorService.submit(new Task(data, index, data.length - index)));
-                        break;
+
+                    byte[] data;
+                    int actualLen;
+
+                    long rest = randomAccessFile.length() - randomAccessFile.getFilePointer();
+                    if (rest < CACHE_SIZE) {
+                        data = new byte[(int) rest];
+                        randomAccessFile.read(data);
+                        actualLen = (int) rest;
+                        readOne = true;
+                    } else {
+                        data = new byte[CACHE_SIZE + 200];
+                        randomAccessFile.read(data, 0, CACHE_SIZE);
+                        byte b;
+                        actualLen = CACHE_SIZE;
+                        while ((b = randomAccessFile.readByte()) != EN) {
+                            data[actualLen++] = b;
+                        }
+                        data[actualLen++] = b;
                     }
+
+
+                    int index = 0;
+                    int block = actualLen / THREAD_NUM;
+                    while (true) {
+                        int start = index;
+                        index += block;
+                        while (data[index++] != EN) {
+                        }
+                        int len = index - start;
+                        futureList.put(executorService.submit(new Task(data, start, len)));
+
+                        if (actualLen - index < block) {
+                            futureList.put(executorService.submit(new Task(data, index, actualLen - index)));
+                            break;
+                        }
+                    }
+
                 }
 
-            logger.info("fileParser has read " + i);
+                logger.info("fileParser has read " + i);
+
             }
 
         } catch (IOException | InterruptedException e) {
