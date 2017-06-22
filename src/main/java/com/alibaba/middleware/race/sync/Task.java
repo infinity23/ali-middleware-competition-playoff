@@ -6,7 +6,6 @@ import com.koloboke.collect.map.hash.HashIntObjMaps;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
@@ -27,14 +26,19 @@ public class Task implements Callable<Result>{
     private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
     private LinkedList<Integer> deleteList = new LinkedList<>();
 
-    private ConcurrentHashMap<Integer, byte[]> resultMap;
+//    private ConcurrentHashMap<Integer, byte[]> resultMap;
 
-
-    public Task(byte[] data, int start, int len, ConcurrentHashMap<Integer, byte[]> resultMap) {
+//
+//    public Task(byte[] data, int start, int len, ConcurrentHashMap<Integer, byte[]> resultMap) {
+//        this.data = data;
+//        this.start = start;
+//        this.len = len;
+//        this.resultMap = resultMap;
+//    }
+    public Task(byte[] data, int start, int len) {
         this.data = data;
         this.start = start;
         this.len = len;
-        this.resultMap = resultMap;
     }
 
     @Override
@@ -63,8 +67,8 @@ public class Task implements Callable<Result>{
 
                     parseInsertKeyValue(data, record);
 
-//                    insertMap.put(pk, record);
-                    resultMap.put(pk, record);
+                    insertMap.put(pk, record);
+//                    resultMap.put(pk, record);
 
                 } else if (operation == 'U') {
                     pk = parsePK(data);
@@ -80,18 +84,18 @@ public class Task implements Callable<Result>{
                             updateMap.remove(pk);
                         }
 
-//                        if(insertMap.containsKey(pk)) {
-//                            insertMap.put(newPK, insertMap.get(pk));
-//                            insertMap.remove(pk);
-//                        }
+                        if(insertMap.containsKey(pk)) {
+                            insertMap.put(newPK, insertMap.get(pk));
+                            insertMap.remove(pk);
+                        }
 
                         pk = newPK;
                     }
 
-//                    if(insertMap.containsKey(pk)){
-//                        parseUpdateKeyValue(data, insertMap.get(pk));
-//                        continue;
-//                    }
+                    if(insertMap.containsKey(pk)){
+                        parseUpdateKeyValue(data, insertMap.get(pk));
+                        continue;
+                    }
 
                     byte[] update;
                     if(!updateMap.containsKey(pk)){
@@ -105,12 +109,12 @@ public class Task implements Callable<Result>{
                 } else {
                     pk = parsePK(data);
 
-//                    if(insertMap.containsKey(pk)) {
-//                        insertMap.remove(pk);
-//                        updateMap.remove(pk);
-//                    }else {
-//                        deleteList.add(pk);
-//                    }
+                    if(insertMap.containsKey(pk)) {
+                        insertMap.remove(pk);
+                        updateMap.remove(pk);
+                    }else {
+                        deleteList.add(pk);
+                    }
 
                     deleteList.add(pk);
 
