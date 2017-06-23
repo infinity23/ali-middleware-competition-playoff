@@ -54,18 +54,23 @@ public class FileParser6 {
                 while (mp < fileChannel.size()) {
 
                     long rest = fileChannel.size() - mp;
+                    int limit;
                     if(rest >= DIRECT_CACHE) {
                         mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, DIRECT_CACHE);
+                        mappedByteBuffer.mark();
                         mappedByteBuffer.position(DIRECT_CACHE - 200);
                         while (mappedByteBuffer.get() != EN) {
                         }
-                        mp = mappedByteBuffer.position();
+                        limit = mappedByteBuffer.position();
+                        mp += limit;
+                        mappedByteBuffer.reset();
                     }else{
                         mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
+                        limit = (int) rest;
                         mp = (int) fileChannel.size();
                     }
 
-                    while (mappedByteBuffer.position() < mp) {
+                    while (mappedByteBuffer.position() < limit) {
 
                         char operation = parseOperation(mappedByteBuffer);
 

@@ -29,6 +29,7 @@ interface Constants {
 //    int LO = 100;
 //    int HI = 200;
 //    int BLOCK_SIZE = 20 * 1024 * 1024;
+//    int CACHE_SIZE = 200 * 1024 * 1024;
 
 
 //    //     工作主目录
@@ -47,9 +48,10 @@ interface Constants {
 //    int HI = 2000000;
 //    int BLOCK_SIZE = 100 * 1024 * 1024;
 //    int CACHE_SIZE = 200 * 1024 * 1024;
+//
+//
+
 //    int THREAD_NUM = 4;
-//
-//
 //    int KEY_NUM = 4;
 //    //后缀 keys43 + nulls16 + |12 + 5 + values最小（3 + 3 + 3 + score(1) ）10
 //    int SUFFIX = 86;

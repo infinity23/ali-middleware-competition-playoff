@@ -114,7 +114,7 @@ public class Server {
             try {
                 parseFile();
             }catch (Exception e){
-                logger.error("parseFile error",e);
+                logger.info("parseFile error",e);
             }
             long parseEnd = System.currentTimeMillis();
             logger.info("parseFile time: " + (parseEnd - parseStart));
