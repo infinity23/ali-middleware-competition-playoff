@@ -135,14 +135,14 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser5 fileParser = new FileParser5();
+        FileParser6 fileParser = new FileParser6();
 
-//        for (int i = 1; i <= 10; i++) {
-//            fileParser.readPage((byte) i);
-//            logger.info("fileParser has read " + i);
-//        }
+        for (int i = 1; i <= 10; i++) {
+            fileParser.readPage((byte) i);
+            logger.info("fileParser has read " + i);
+        }
 
-        fileParser.readPages();
+//        fileParser.readPages();
 
         logger.info("start showResult...");
         fileParser.showResult();
