@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,86 +42,103 @@ public class FileParser6 {
     }
 
 
-    private int index = 0;
-    public void readPage(byte fileName) {
+    public void readPages() {
+
         try {
-            RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r");
 
-//            FileChannel fileChannel = new RandomAccessFile(DATA_HOME + fileName + ".txt", "r").getChannel();
-//            MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, fileChannel.size());
-//
-            byte[] data = new byte[(int) randomAccessFile.length()];
-            randomAccessFile.read(data);
-            index = 0;
+            for (int i = 1; i <= 10; i++) {
+                FileChannel fileChannel = new RandomAccessFile(DATA_HOME + i + ".txt", "r").getChannel();
 
-            while (index < data.length) {
+                int mp = 0;
+                MappedByteBuffer mappedByteBuffer;
+                while (mp < fileChannel.size()) {
 
-                char operation = parseOperation(data);
-
-                int pk;
-                if (operation == 'I') {
-                    //null|
-                    skipNBytes(data, 5);
-
-                    pk = parsePK(data);
-
-                    byte[] record = new byte[LEN];
-                    parseInsertKeyValue(data, record);
-                    resultMap.put(pk, record);
-                } else if (operation == 'U') {
-                    pk = parsePK(data);
-                    int newPK = parsePK(data);
-
-                    //处理主键变更
-                    if (pk != newPK) {
-                        resultMap.put(newPK, resultMap.get(pk));
-                        resultMap.remove(pk);
-                        pk = newPK;
+                    long rest = fileChannel.size() - mp;
+                    if(rest >= DIRECT_CACHE) {
+                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, DIRECT_CACHE);
+                        mappedByteBuffer.position(DIRECT_CACHE - 200);
+                        while (mappedByteBuffer.get() != EN) {
+                        }
+                        mp = mappedByteBuffer.position();
+                    }else{
+                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
+                        mp = (int) fileChannel.size();
                     }
-                    parseUpdateKeyValue(data, resultMap.get(pk));
 
-                } else {
-                    pk = parsePK(data);
-                    resultMap.remove(pk);
+                    while (mappedByteBuffer.position() < mp) {
 
-                    //跳过剩余
-                    skipNBytes(data, SUFFIX);
-                    seekForEN(data);
+                        char operation = parseOperation(mappedByteBuffer);
+
+                        int pk;
+                        if (operation == 'I') {
+                            //null|
+                            skipNBytes(mappedByteBuffer, 5);
+
+                            pk = parsePK(mappedByteBuffer);
+
+                            byte[] record = new byte[LEN];
+                            parseInsertKeyValue(mappedByteBuffer, record);
+                            resultMap.put(pk, record);
+                        } else if (operation == 'U') {
+                            pk = parsePK(mappedByteBuffer);
+                            int newPK = parsePK(mappedByteBuffer);
+
+                            //处理主键变更
+                            if (pk != newPK) {
+                                resultMap.put(newPK, resultMap.get(pk));
+                                resultMap.remove(pk);
+                                pk = newPK;
+                            }
+                            parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
+
+                        } else {
+                            pk = parsePK(mappedByteBuffer);
+                            resultMap.remove(pk);
+
+                            //跳过剩余
+                            skipNBytes(mappedByteBuffer, SUFFIX);
+                            seekForEN(mappedByteBuffer);
+                        }
+                    }
                 }
+
+            logger.info("fileParser has read " + i);
+
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
 
     }
 
 
     // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private void parseUpdateKeyValue(byte[] data, byte[] record) {
+    private void parseUpdateKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
         while (true) {
-            int start = index;
-            if (data[index++] == EN) {
+            int start = mappedByteBuffer.position();
+            if (mappedByteBuffer.get() == EN) {
                 break;
             }
-            seekForSP(data);
-            int len = index - 1 - start;
-            seekForSP(data);
+            seekForSP(mappedByteBuffer);
+            int len = mappedByteBuffer.position() - 1 - start;
+            seekForSP(mappedByteBuffer);
             switch (len) {
                 case KEY1_LEN:
-                    fillArray(data, record, 0);
+                    fillArray(mappedByteBuffer, record, 0);
                     break;
                 case KEY2_LEN:
-                    fillArray(data, record, 1);
+                    fillArray(mappedByteBuffer, record, 1);
                     break;
                 case KEY3_LEN:
-                    fillArray(data, record, 2);
+                    fillArray(mappedByteBuffer, record, 2);
                     break;
                 case KEY4_LEN:
-                    fillArray(data, record, 3);
+                    fillArray(mappedByteBuffer, record, 3);
                     break;
                 case KEY5_LEN:
-                    fillArray(data, record, 4);
+                    fillArray(mappedByteBuffer, record, 4);
                     break;
             }
         }
@@ -127,19 +146,19 @@ public class FileParser6 {
 
     // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
     //指向SP后
-    private void parseInsertKeyValue(byte[] data, byte[] record) {
+    private void parseInsertKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
 
         for (int i = 0; i < KEY_NUM; i++) {
-            skipNBytes(data, KEY_LEN_ARRAY[i] + 6);
-            fillArrayInsert(data, record, i);
+            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
+            fillArrayInsert(mappedByteBuffer, record, i);
         }
 
         //跳过EN
-        index++;
+        mappedByteBuffer.get();
     }
 
     //将value填入数组，指向SP后
-    private void fillArrayInsert(byte[] data, byte[] record, int val) {
+    private void fillArrayInsert(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
 //        byte b;
 //        byte offset = VAL_OFFSET_ARRAY[val];
 //        //预留一个byte的长度
@@ -154,13 +173,13 @@ public class FileParser6 {
         byte b;
 
         int i = VAL_OFFSET_ARRAY[val];
-        while ((b = data[index++]) != SP) {
+        while ((b = mappedByteBuffer.get()) != SP) {
             record[i++] = b;
         }
 
     }
 
-    private void fillArray(byte[] data, byte[] record, int val) {
+    private void fillArray(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
 //        byte b;
 //        byte offset = VAL_OFFSET_ARRAY[val];
 //        //预留一个byte的长度
@@ -179,7 +198,7 @@ public class FileParser6 {
         byte len = VAL_LEN_ARRAY[val];
 
         int i = offset;
-        while ((b = data[index++]) != SP) {
+        while ((b = mappedByteBuffer.get()) != SP) {
             record[i++] = b;
         }
 
@@ -190,13 +209,13 @@ public class FileParser6 {
 
     }
 
-    private void skipNBytes(byte[] data, int n) {
-        index += n;
+    private void skipNBytes(MappedByteBuffer mappedByteBuffer, int n) {
+        mappedByteBuffer.position(mappedByteBuffer.position() + n);
     }
 
 
     // NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private int parsePK(byte[] data) {
+    private int parsePK(MappedByteBuffer mappedByteBuffer) {
 
 //      转为String
 //        return Long.valueOf(new String((bytes)));
@@ -204,7 +223,7 @@ public class FileParser6 {
         //直接计算
         int val = 0;
         byte b;
-        while ((b = data[index++]) != SP) {
+        while ((b = mappedByteBuffer.get()) != SP) {
             val = val * 10 + b - CHAR_ZERO;
         }
 
@@ -212,33 +231,32 @@ public class FileParser6 {
     }
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private char parseOperation(byte[] data) {
+    private char parseOperation(MappedByteBuffer mappedByteBuffer) {
         //跳过前缀(55 - 62)
 //        seekForSP(mappedByteBuffer, 5);
-        skipNBytes(data, 54);
-        seekForSP(data);
+        skipNBytes(mappedByteBuffer, 54);
+        seekForSP(mappedByteBuffer);
 
-        char op = (char) data[index++];
+        char op = (char) mappedByteBuffer.get();
 
         //为parsePK做准备
 //        seekForSP(mappedByteBuffer, 2);
-        skipNBytes(data, PK_NAME_LEN + 2);
+        skipNBytes(mappedByteBuffer, PK_NAME_LEN + 2);
 
         return op;
     }
 
 
-    private void seekForSP(byte[] data) {
-        while (data[index++] != SP) {
+    private void seekForSP(MappedByteBuffer mappedByteBuffer) {
+        while (mappedByteBuffer.get() != SP) {
         }
     }
 
     //寻找下个EN，指向下个元素
-    private void seekForEN(byte[] data) {
-        while (data[index++] != EN) {
+    private void seekForEN(MappedByteBuffer mappedByteBuffer) {
+        while (mappedByteBuffer.get() != EN) {
         }
     }
-
 
 
     public void showResult() {
