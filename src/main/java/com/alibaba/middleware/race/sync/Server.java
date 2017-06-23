@@ -114,7 +114,7 @@ public class Server {
             try {
                 parseFile();
             }catch (Exception e){
-                logger.info("parseFile error",e);
+                logger.error("parseFile error",e);
             }
             long parseEnd = System.currentTimeMillis();
             logger.info("parseFile time: " + (parseEnd - parseStart));
@@ -135,7 +135,7 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser6 fileParser = new FileParser6();
+        FileParser5 fileParser = new FileParser5();
 
 //        for (int i = 1; i <= 10; i++) {
 //            fileParser.readPage((byte) i);

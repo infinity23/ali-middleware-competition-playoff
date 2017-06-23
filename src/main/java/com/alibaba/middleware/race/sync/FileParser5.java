@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.*;
 import java.util.concurrent.*;
@@ -54,8 +55,9 @@ public class FileParser5 {
 
     }
 
-    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
-//    private LinkedList<Future<Result>> futureList = new LinkedList<>();
+//    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
+    private LinkedList<Future<Result>> futureList = new LinkedList<>();
+    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void readPages() {
@@ -65,60 +67,107 @@ public class FileParser5 {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
                 FileChannel fileChannel = randomAccessFile.getChannel();
 
-                int MP = 0;
                 boolean readOne = false;
-                while (!readOne) {
-//                    MappedByteBuffer mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, MP, DIRECT_CACHE - 200);
-//                    byte[] data = new byte[DIRECT_CACHE - 200];
-//                    mappedByteBuffer.mark();
-//                    mappedByteBuffer.position(199 * 1024 * 1024);
-//                    while (mappedByteBuffer.get() != EN) {
+                int mp = 0;
+                MappedByteBuffer mappedByteBuffer;
+                while (mp < fileChannel.size()) {
+
+                    long rest = fileChannel.size() - mp;
+                    int limit;
+                    int block = DIRECT_CACHE / THREAD_NUM;
+                    if(rest >= block) {
+                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, block);
+                        mappedByteBuffer.mark();
+                        mappedByteBuffer.position(block - 200);
+                        while (mappedByteBuffer.get() != EN) {
+                        }
+                        limit = mappedByteBuffer.position();
+                        mp += limit;
+                        mappedByteBuffer.reset();
+                        futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
+                    }else{
+                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
+                        limit = (int) rest;
+                        mp = (int) fileChannel.size();
+                        futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
+
+                        //等待任务完成
+                        int n = futureList.size();
+                        final Result[] results = new Result[n];
+                        try {
+                            for (int j = 0; j < n; j++) {
+                                results[j] = futureList.poll().get();
+                            }
+                            resultsList.add(results);
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+//                    int block = limit / THREAD_NUM;
+//                    byte[] data;
+//                    while(mappedByteBuffer.position() < limit){
+//                        data = new byte[block + 200];
+//                        mappedByteBuffer.get(data, 0, block);
+//                        byte b;
+//                        int len = block;
+//                        while((b = mappedByteBuffer.get()) != EN){
+//                            data[len++] = b;
+//                        }
+//                        data[len++] = b;
+//                        futureList.put(executorService.submit(new Task(data, 0, len)));
+//
+//                        int res = limit - mappedByteBuffer.position();
+//                        if(res < block){
+//                            data = new byte[res];
+//                            mappedByteBuffer.get(data);
+//                            futureList.put(executorService.submit(new Task(data, 0, res)));
+//                            break;
+//                        }
 //                    }
-//                    int mlen = mappedByteBuffer.position() - MP;
+
+
+
+
+
+//                while (!readOne) {
 //
-//                    MP += mappedByteBuffer.position();
+//                    byte[] data;
+//                    int actualLen;
 //
-//                    byte[] data = new byte[mlen];
-//                    mappedByteBuffer.reset();
-//                    mappedByteBuffer.get(data);
+//                    long rest = randomAccessFile.length() - randomAccessFile.getFilePointer();
+//                    if (rest < CACHE_SIZE) {
+//                        data = new byte[(int) rest];
+//                        randomAccessFile.read(data);
+//                        actualLen = (int) rest;
+//                        readOne = true;
+//                    } else {
+//                        data = new byte[CACHE_SIZE + 200];
+//                        randomAccessFile.read(data, 0, CACHE_SIZE);
+//                        byte b;
+//                        actualLen = CACHE_SIZE;
+//                        while ((b = randomAccessFile.readByte()) != EN) {
+//                            data[actualLen++] = b;
+//                        }
+//                        data[actualLen++] = b;
+//                    }
 
 
-                    byte[] data;
-                    int actualLen;
-
-                    long rest = randomAccessFile.length() - randomAccessFile.getFilePointer();
-                    if (rest < CACHE_SIZE) {
-                        data = new byte[(int) rest];
-                        randomAccessFile.read(data);
-                        actualLen = (int) rest;
-                        readOne = true;
-                    } else {
-                        data = new byte[CACHE_SIZE + 200];
-                        randomAccessFile.read(data, 0, CACHE_SIZE);
-                        byte b;
-                        actualLen = CACHE_SIZE;
-                        while ((b = randomAccessFile.readByte()) != EN) {
-                            data[actualLen++] = b;
-                        }
-                        data[actualLen++] = b;
-                    }
-
-
-                    int index = 0;
-                    int block = actualLen / THREAD_NUM;
-                    while (true) {
-                        int start = index;
-                        index += block;
-                        while (data[index++] != EN) {
-                        }
-                        int len = index - start;
-                        futureList.put(executorService.submit(new Task(data, start, len)));
-
-                        if (actualLen - index < block) {
-                            futureList.put(executorService.submit(new Task(data, index, actualLen - index)));
-                            break;
-                        }
-                    }
+//                    int index = 0;
+//                    int block = actualLen / THREAD_NUM;
+//                    while (true) {
+//                        int start = index;
+//                        index += block;
+//                        while (data[index++] != EN) {
+//                        }
+//                        int len = index - start;
+//                        futureList.put(executorService.submit(new Task(data, start, len)));
+//
+//                        if (actualLen - index < block) {
+//                            futureList.put(executorService.submit(new Task(data, index, actualLen - index)));
+//                            break;
+//                        }
+//                    }
 
 //                    mergeResult();
 
@@ -128,8 +177,13 @@ public class FileParser5 {
 
             }
 
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        executorService.shutdown();
+        synchronized (this){
+            notifyAll();
         }
 
         readFinish = true;
@@ -158,21 +212,21 @@ public class FileParser5 {
 //        }
 
 
-        Result result = null;
-        while (true) {
-            try {
-                if (!readFinish) {
-                    result = futureList.take().get();
-                } else {
-                    Future<Result> future = futureList.poll();
-                    if (future == null) {
-                        break;
-                    }
-                    result = future.get();
-                }
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
+//        Result result = null;
+//        while (true) {
+//            try {
+//                if (!readFinish) {
+//                    result = futureList.take().get();
+//                } else {
+//                    Future<Result> future = futureList.poll();
+//                    if (future == null) {
+//                        break;
+//                    }
+//                    result = future.get();
+//                }
+//            } catch (InterruptedException | ExecutionException e) {
+//                e.printStackTrace();
+//            }
 
 //        while(!futureList.isEmpty()){
 //
@@ -182,54 +236,70 @@ public class FileParser5 {
 //                e.printStackTrace();
 //            }
 
-
-            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
-            LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
-            LinkedList<Integer> deleteList = result.getDeleteSet();
-            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
-
-            //先处理PK变更
-            for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
-                int pk = entry.getKey();
-                int newPk = entry.getValue();
-
-                resultMap.put(newPk, resultMap.get(pk));
-                resultMap.remove(pk);
-            }
-
-
-            //处理update
-            resultMap.putAll(insertMap);
-
-
-            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
-                int pk = entry.getKey();
-                byte[] update = entry.getValue();
-                byte[] record = resultMap.get(pk);
-
-
-                for (int j = 0; j < KEY_NUM; j++) {
-                    int offset = VAL_OFFSET_ARRAY[j];
-                    if (update[offset] == 0) {
-                        continue;
+        Result[] results = null;
+        while (true) {
+            try {
+                if (!readFinish) {
+                    results = resultsList.take();
+                } else {
+                    results = resultsList.poll();
+                    if (results == null) {
+                        break;
                     }
-                    int len = VAL_LEN_ARRAY[j];
-                    System.arraycopy(update, offset, record, offset, len);
                 }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
 
-            //处理delete
-            while (!deleteList.isEmpty()) {
-                int pk = deleteList.poll();
-                resultMap.remove(pk);
-            }
+            for (Result result : results) {
 
+                HashIntObjMap<byte[]> insertMap = result.getInsertMap();
+                LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
+                LinkedList<Integer> deleteList = result.getDeleteSet();
+                LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
+
+                //先处理PK变更
+                for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
+                    int pk = entry.getKey();
+                    int newPk = entry.getValue();
+
+                    resultMap.put(newPk, resultMap.get(pk));
+                    resultMap.remove(pk);
+                }
+
+
+                //处理update
+                resultMap.putAll(insertMap);
+
+
+                for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
+                    int pk = entry.getKey();
+                    byte[] update = entry.getValue();
+                    byte[] record = resultMap.get(pk);
+
+
+                    for (int j = 0; j < KEY_NUM; j++) {
+                        int offset = VAL_OFFSET_ARRAY[j];
+                        if (update[offset] == 0) {
+                            continue;
+                        }
+                        int len = VAL_LEN_ARRAY[j];
+                        System.arraycopy(update, offset, record, offset, len);
+                    }
+                }
+
+                //处理delete
+                while (!deleteList.isEmpty()) {
+                    int pk = deleteList.poll();
+                    resultMap.remove(pk);
+                }
+
+            }
         }
 
-        synchronized (this) {
+        synchronized (this){
             notifyAll();
         }
-
 
 //            //变更主键处理
 //            if (i < results.length - 1) {
