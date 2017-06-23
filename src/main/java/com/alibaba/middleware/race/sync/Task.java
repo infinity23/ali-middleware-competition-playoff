@@ -3,6 +3,7 @@ package com.alibaba.middleware.race.sync;
 import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
 
+import java.nio.MappedByteBuffer;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
@@ -17,9 +18,9 @@ public class Task implements Callable<Result>{
 //    HashMap<Long, FilePointer> insertMap = new HashMap<>();
 //    LinkedHashMap<Long, Long> PKChangeMap = new LinkedHashMap<>();
 
-    private byte[] data;
-    private int start;
-    private int len;
+//    private byte[] mappedByteBuffer;
+//    private int start;
+//    private int len;
 
     private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap();
     private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
@@ -29,16 +30,24 @@ public class Task implements Callable<Result>{
 //    private ConcurrentHashMap<Integer, byte[]> resultMap;
 
 //
-//    public Task(byte[] data, int start, int len, ConcurrentHashMap<Integer, byte[]> resultMap) {
-//        this.data = data;
+//    public Task(byte[] mappedByteBuffer, int start, int len, ConcurrentHashMap<Integer, byte[]> resultMap) {
+//        this.mappedByteBuffer = mappedByteBuffer;
 //        this.start = start;
 //        this.len = len;
 //        this.resultMap = resultMap;
 //    }
-    public Task(byte[] data, int start, int len) {
-        this.data = data;
-        this.start = start;
-        this.len = len;
+//    public Task(byte[] mappedByteBuffer, int start, int len) {
+//        this.mappedByteBuffer = mappedByteBuffer;
+//        this.start = start;
+//        this.len = len;
+//    }
+    
+    private MappedByteBuffer mappedByteBuffer;
+    private int limit;
+    
+    public Task(MappedByteBuffer mappedByteBuffer, int limit) {
+        this.mappedByteBuffer = mappedByteBuffer;
+        this.limit = limit;
     }
 
     @Override
@@ -51,28 +60,27 @@ public class Task implements Callable<Result>{
     private int index;
     public void read() {
 
-            index = start;
-            while (index < start + len) {
+            while (mappedByteBuffer.position() < limit) {
 
-                char operation = parseOperation(data);
+                char operation = parseOperation(mappedByteBuffer);
 
                 int pk;
                 if (operation == 'I') {
                     //null|
-                    skipNBytes(data, 5);
+                    skipNBytes(mappedByteBuffer, 5);
 
-                    pk = parsePK(data);
+                    pk = parsePK(mappedByteBuffer);
 
                     byte[] record = new byte[LEN];
 
-                    parseInsertKeyValue(data, record);
+                    parseInsertKeyValue(mappedByteBuffer, record);
 
                     insertMap.put(pk, record);
 //                    resultMap.put(pk, record);
 
                 } else if (operation == 'U') {
-                    pk = parsePK(data);
-                    int newPK = parsePK(data);
+                    pk = parsePK(mappedByteBuffer);
+                    int newPK = parsePK(mappedByteBuffer);
 
 
                     //处理主键变更
@@ -93,7 +101,7 @@ public class Task implements Callable<Result>{
                     }
 
                     if(insertMap.containsKey(pk)){
-                        parseUpdateKeyValue(data, insertMap.get(pk));
+                        parseUpdateKeyValue(mappedByteBuffer, insertMap.get(pk));
                         continue;
                     }
 
@@ -104,10 +112,10 @@ public class Task implements Callable<Result>{
                     }else{
                         update = updateMap.get(pk);
                     }
-                    parseUpdateKeyValue(data, update);
+                    parseUpdateKeyValue(mappedByteBuffer, update);
 
                 } else {
-                    pk = parsePK(data);
+                    pk = parsePK(mappedByteBuffer);
 
                     if(insertMap.containsKey(pk)) {
                         insertMap.remove(pk);
@@ -119,8 +127,8 @@ public class Task implements Callable<Result>{
                     deleteList.add(pk);
 
                     //跳过剩余
-                    skipNBytes(data, SUFFIX);
-                    seekForEN(data);
+                    skipNBytes(mappedByteBuffer, SUFFIX);
+                    seekForEN(mappedByteBuffer);
                 }
 
             }
@@ -128,30 +136,30 @@ public class Task implements Callable<Result>{
 
 
     // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private void parseUpdateKeyValue(byte[] data, byte[] record) {
+    private void parseUpdateKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
         while (true) {
-            int start = index;
-            if (data[index++] == EN) {
+            int start = mappedByteBuffer.position();
+            if (mappedByteBuffer.get() == EN) {
                 break;
             }
-            seekForSP(data);
-            int len = index - 1 - start;
-            seekForSP(data);
+            seekForSP(mappedByteBuffer);
+            int len = mappedByteBuffer.position() - 1 - start;
+            seekForSP(mappedByteBuffer);
             switch (len) {
                 case KEY1_LEN:
-                    fillArray(data, record, 0);
+                    fillArray(mappedByteBuffer, record, 0);
                     break;
                 case KEY2_LEN:
-                    fillArray(data, record, 1);
+                    fillArray(mappedByteBuffer, record, 1);
                     break;
                 case KEY3_LEN:
-                    fillArray(data, record, 2);
+                    fillArray(mappedByteBuffer, record, 2);
                     break;
                 case KEY4_LEN:
-                    fillArray(data, record, 3);
+                    fillArray(mappedByteBuffer, record, 3);
                     break;
                 case KEY5_LEN:
-                    fillArray(data, record, 4);
+                    fillArray(mappedByteBuffer, record, 4);
                     break;
             }
         }
@@ -159,19 +167,19 @@ public class Task implements Callable<Result>{
 
     // first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
     //指向SP后
-    private void parseInsertKeyValue(byte[] data, byte[] record) {
+    private void parseInsertKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
 
         for (int i = 0; i < KEY_NUM; i++) {
-            skipNBytes(data, KEY_LEN_ARRAY[i] + 6);
-            fillArrayInsert(data, record, i);
+            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
+            fillArrayInsert(mappedByteBuffer, record, i);
         }
 
         //跳过EN
-        index++;
+        mappedByteBuffer.get();
     }
 
     //将value填入数组，指向SP后
-    private void fillArrayInsert(byte[] data, byte[] record, int val) {
+    private void fillArrayInsert(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
 //        byte b;
 //        byte offset = VAL_OFFSET_ARRAY[val];
 //        //预留一个byte的长度
@@ -186,13 +194,13 @@ public class Task implements Callable<Result>{
         byte b;
 
         int i = VAL_OFFSET_ARRAY[val];
-        while ((b = data[index++]) != SP) {
+        while ((b = mappedByteBuffer.get()) != SP) {
             record[i++] = b;
         }
 
     }
 
-    private void fillArray(byte[] data, byte[] record, int val) {
+    private void fillArray(MappedByteBuffer mappedByteBuffer, byte[] record, int val) {
 //        byte b;
 //        byte offset = VAL_OFFSET_ARRAY[val];
 //        //预留一个byte的长度
@@ -211,7 +219,7 @@ public class Task implements Callable<Result>{
         byte len = VAL_LEN_ARRAY[val];
 
         int i = offset;
-        while ((b = data[index++]) != SP) {
+        while ((b = mappedByteBuffer.get()) != SP) {
             record[i++] = b;
         }
 
@@ -222,13 +230,13 @@ public class Task implements Callable<Result>{
 
     }
 
-    private void skipNBytes(byte[] data, int n) {
-        index += n;
+    private void skipNBytes(MappedByteBuffer mappedByteBuffer, int n) {
+        mappedByteBuffer.position(mappedByteBuffer.position() + n);
     }
 
 
     // NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private int parsePK(byte[] data) {
+    private int parsePK(MappedByteBuffer mappedByteBuffer) {
 
 //      转为String
 //        return Long.valueOf(new String((bytes)));
@@ -236,7 +244,7 @@ public class Task implements Callable<Result>{
         //直接计算
         int val = 0;
         byte b;
-        while ((b = data[index++]) != SP) {
+        while ((b = mappedByteBuffer.get()) != SP) {
             val = val * 10 + b - CHAR_ZERO;
         }
 
@@ -244,32 +252,31 @@ public class Task implements Callable<Result>{
     }
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private char parseOperation(byte[] data) {
+    private char parseOperation(MappedByteBuffer mappedByteBuffer) {
         //跳过前缀(55 - 62)
 //        seekForSP(mappedByteBuffer, 5);
-        skipNBytes(data, 54);
-        seekForSP(data);
+        skipNBytes(mappedByteBuffer, 54);
+        seekForSP(mappedByteBuffer);
 
-        char op = (char) data[index++];
+        char op = (char) mappedByteBuffer.get();
 
         //为parsePK做准备
 //        seekForSP(mappedByteBuffer, 2);
-        skipNBytes(data, PK_NAME_LEN + 2);
+        skipNBytes(mappedByteBuffer, PK_NAME_LEN + 2);
 
         return op;
     }
 
 
-    private void seekForSP(byte[] data) {
-        while (data[index++] != SP) {
+    private void seekForSP(MappedByteBuffer mappedByteBuffer) {
+        while (mappedByteBuffer.get() != SP) {
         }
     }
 
     //寻找下个EN，指向下个元素
-    private void seekForEN(byte[] data) {
-        while (data[index++] != EN) {
+    private void seekForEN(MappedByteBuffer mappedByteBuffer) {
+        while (mappedByteBuffer.get() != EN) {
         }
     }
-
 
 }

@@ -45,7 +45,7 @@ public class FileParser5 {
         executorService.execute(new Runnable() {
             @Override
             public void run() {
-                Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+//                Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
                 long start = System.currentTimeMillis();
                 mergeResult();
                 long end = System.currentTimeMillis();
@@ -70,32 +70,33 @@ public class FileParser5 {
                 boolean readOne = false;
                 int mp = 0;
                 MappedByteBuffer mappedByteBuffer;
-                while (mp < fileChannel.size()) {
+                int block = DIRECT_CACHE / THREAD_NUM;
 
+                while (mp < fileChannel.size()) {
                     long rest = fileChannel.size() - mp;
                     int limit;
-                    int block = DIRECT_CACHE / THREAD_NUM;
-                    if(rest >= block) {
-                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, block);
-                        mappedByteBuffer.mark();
-                        mappedByteBuffer.position(block - 200);
-                        while (mappedByteBuffer.get() != EN) {
+                        if (rest >= block) {
+                            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, block);
+                            mappedByteBuffer.mark();
+                            mappedByteBuffer.position(block - 200);
+                            while (mappedByteBuffer.get() != EN) {
+                            }
+                            limit = mappedByteBuffer.position();
+                            mp += limit;
+                            mappedByteBuffer.reset();
+                            futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
+                        } else {
+                            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
+                            limit = (int) rest;
+                            mp = (int) fileChannel.size();
+                            futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
                         }
-                        limit = mappedByteBuffer.position();
-                        mp += limit;
-                        mappedByteBuffer.reset();
-                        futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
-                    }else{
-                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
-                        limit = (int) rest;
-                        mp = (int) fileChannel.size();
-                        futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
 
-                        //等待任务完成
-                        int n = futureList.size();
-                        final Result[] results = new Result[n];
+                    //等待任务完成
+                    if(futureList.size() == THREAD_NUM) {
+                        final Result[] results = new Result[THREAD_NUM];
                         try {
-                            for (int j = 0; j < n; j++) {
+                            for (int j = 0; j < THREAD_NUM; j++) {
                                 results[j] = futureList.poll().get();
                             }
                             resultsList.add(results);
@@ -103,6 +104,7 @@ public class FileParser5 {
                             e.printStackTrace();
                         }
                     }
+
 
 //                    int block = limit / THREAD_NUM;
 //                    byte[] data;
@@ -125,8 +127,6 @@ public class FileParser5 {
 //                            break;
 //                        }
 //                    }
-
-
 
 
 
@@ -181,10 +181,18 @@ public class FileParser5 {
             e.printStackTrace();
         }
 
-        executorService.shutdown();
-        synchronized (this){
-            notifyAll();
+        //处理余下任务
+        int n = futureList.size();
+        final Result[] results = new Result[n];
+        try {
+            for (int j = 0; j < n; j++) {
+                results[j] = futureList.poll().get();
+            }
+            resultsList.add(results);
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
+
 
         readFinish = true;
         long endTime = System.currentTimeMillis();
