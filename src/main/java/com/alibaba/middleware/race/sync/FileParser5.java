@@ -13,7 +13,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.*;
 
 import static com.alibaba.middleware.race.sync.Cons.VAL_LEN_ARRAY;
@@ -235,16 +237,33 @@ public class FileParser5 {
                 e.printStackTrace();
             }
 
+//            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
+//            LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
+//            LinkedList<Integer> deleteList = result.getDeleteSet();
+//            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
+
+
             HashIntObjMap<byte[]> insertMap = result.getInsertMap();
-            LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
-            LinkedList<Integer> deleteList = result.getDeleteSet();
-            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
+            HashIntObjMap<byte[]> updateMap = result.getUpdateMap();
+            ArrayList<Integer> updateList = result.getUpdateList();
+            ArrayList<Integer> oldPKList = result.getOldPKList();
+            ArrayList<Integer> newPKList = result.getNewPKList();
+            ArrayList<Integer> deleteList = result.getDeleteList();
+            
 
             //先处理PK变更
-            for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
-                int pk = entry.getKey();
-                int newPk = entry.getValue();
+//            for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
+//                int pk = entry.getKey();
+//                int newPk = entry.getValue();
+//
+//                resultMap.put(newPk, resultMap.get(pk));
+//                resultMap.remove(pk);
+//            }
 
+            int n = oldPKList.size();
+            for (int i = 0; i < n; i++) {
+                int pk = oldPKList.get(i);
+                int newPk = newPKList.get(i);
                 resultMap.put(newPk, resultMap.get(pk));
                 resultMap.remove(pk);
             }
@@ -254,11 +273,31 @@ public class FileParser5 {
             resultMap.putAll(insertMap);
 
 
-            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
-                int pk = entry.getKey();
-                byte[] update = entry.getValue();
-                byte[] record = resultMap.get(pk);
+//            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
+//                int pk = entry.getKey();
+//                byte[] update = entry.getValue();
+//                byte[] record = resultMap.get(pk);
+//
+//
+//                for (int j = 0; j < KEY_NUM; j++) {
+//                    int offset = VAL_OFFSET_ARRAY[j];
+//                    if (update[offset] == 0) {
+//                        continue;
+//                    }
+//                    int len = VAL_LEN_ARRAY[j];
+//                    System.arraycopy(update, offset, record, offset, len);
+//                }
+//            }
 
+
+            n = updateList.size();
+            for (int i = 0; i < n; i++) {
+                int pk = updateList.get(i);
+                byte[] record = resultMap.get(pk);
+                if (record == null){
+                    continue;
+                }
+                byte[] update = updateMap.get(pk);
 
                 for (int j = 0; j < KEY_NUM; j++) {
                     int offset = VAL_OFFSET_ARRAY[j];
@@ -270,9 +309,16 @@ public class FileParser5 {
                 }
             }
 
+
             //处理delete
-            while (!deleteList.isEmpty()) {
-                int pk = deleteList.poll();
+//            while (!deleteList.isEmpty()) {
+//                int pk = deleteList.poll();
+//                resultMap.remove(pk);
+//            }
+
+            n = deleteList.size();
+            for (int i = 0; i < n; i++) {
+                int pk = deleteList.get(i);
                 resultMap.remove(pk);
             }
 

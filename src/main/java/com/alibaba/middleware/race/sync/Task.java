@@ -4,8 +4,7 @@ import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
 
 import java.nio.MappedByteBuffer;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
@@ -23,9 +22,14 @@ public class Task implements Callable<Result>{
 //    private int len;
 
     private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap();
-    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
-    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
-    private LinkedList<Integer> deleteList = new LinkedList<>();
+    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap();
+    private ArrayList<Integer> updateList = new ArrayList<>();
+//    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
+//    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
+    private ArrayList<Integer> oldPKList = new ArrayList<>();
+    private ArrayList<Integer> newPKList = new ArrayList<>();
+//    private LinkedList<Integer> deleteList = new LinkedList<>();
+    private ArrayList<Integer> deleteList = new ArrayList<>();
 
 //    private ConcurrentHashMap<Integer, byte[]> resultMap;
 
@@ -53,7 +57,8 @@ public class Task implements Callable<Result>{
     @Override
     public Result call() throws Exception {
         read();
-        return new Result(insertMap,updateMap,PKChangeMap,deleteList);
+//        return new Result(insertMap,updateMap,PKChangeMap,deleteList);
+        return new Result(insertMap,updateMap,updateList,oldPKList, newPKList,deleteList);
     }
 
 
@@ -86,10 +91,13 @@ public class Task implements Callable<Result>{
                     //处理主键变更
                     if (pk != newPK) {
 
-                        PKChangeMap.put(pk,newPK);
+//                        PKChangeMap.put(pk,newPK);
+                        oldPKList.add(pk);
+                        newPKList.add(newPK);
                         if(updateMap.containsKey(pk)) {
                             updateMap.put(newPK, updateMap.get(pk));
-                            updateMap.remove(pk);
+                            updateList.add(newPK);
+//                            updateMap.remove(pk);
                         }
 
                         if(insertMap.containsKey(pk)) {
@@ -109,6 +117,7 @@ public class Task implements Callable<Result>{
                     if(!updateMap.containsKey(pk)){
                         update = new byte[LEN];
                         updateMap.put(pk,update);
+                        updateList.add(pk);
                     }else{
                         update = updateMap.get(pk);
                     }
@@ -117,12 +126,12 @@ public class Task implements Callable<Result>{
                 } else {
                     pk = parsePK(mappedByteBuffer);
 
-                    if(insertMap.containsKey(pk)) {
-                        insertMap.remove(pk);
-                        updateMap.remove(pk);
-                    }else {
-                        deleteList.add(pk);
-                    }
+//                    if(insertMap.containsKey(pk)) {
+//                        insertMap.remove(pk);
+//                        updateMap.remove(pk);
+//                    }else {
+//                        deleteList.add(pk);
+//                    }
 
                     deleteList.add(pk);
 
