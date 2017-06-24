@@ -23,14 +23,14 @@ public class Task implements Callable<Result>{
 //    private int len;
 
 //    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(100000);
-    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(100000);
-    private ArrayList<Integer> updateList = new ArrayList<>(100000);
+    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(128 * 1024);
+    private ArrayList<Integer> updateList = new ArrayList<>(128 * 1024);
 //    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
 //    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
-    private ArrayList<Integer> oldPKList = new ArrayList<>(100000);
-    private ArrayList<Integer> newPKList = new ArrayList<>(100000);
+    private ArrayList<Integer> oldPKList = new ArrayList<>(128 * 1024);
+    private ArrayList<Integer> newPKList = new ArrayList<>(128 * 1024);
 //    private LinkedList<Integer> deleteList = new LinkedList<>();
-    private ArrayList<Integer> deleteList = new ArrayList<>(100000);
+    private ArrayList<Integer> deleteList = new ArrayList<>(128 * 1024);
 
     private ConcurrentHashMap<Integer, byte[]> resultMap;
 
