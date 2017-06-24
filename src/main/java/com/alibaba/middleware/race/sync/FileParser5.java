@@ -34,7 +34,7 @@ public class FileParser5 {
     //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
     private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
-//    private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>();
+    //    private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>();
     private boolean mergeResultStart;
     private boolean readFinish;
 
@@ -55,9 +55,9 @@ public class FileParser5 {
 
     }
 
-//    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
-    private LinkedList<Future<Result>> futureList = new LinkedList<>();
-    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
+    //    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
+    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
+//    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void readPages() {
@@ -75,35 +75,35 @@ public class FileParser5 {
                 while (mp < fileChannel.size()) {
                     long rest = fileChannel.size() - mp;
                     int limit;
-                        if (rest >= block) {
-                            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, block);
-                            mappedByteBuffer.mark();
-                            mappedByteBuffer.position(block - 200);
-                            while (mappedByteBuffer.get() != EN) {
-                            }
-                            limit = mappedByteBuffer.position();
-                            mp += limit;
-                            mappedByteBuffer.reset();
-                            futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
-                        } else {
-                            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
-                            limit = (int) rest;
-                            mp = (int) fileChannel.size();
-                            futureList.add(executorService.submit(new Task(mappedByteBuffer, limit)));
+                    if (rest >= block) {
+                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, block);
+                        mappedByteBuffer.mark();
+                        mappedByteBuffer.position(block - 200);
+                        while (mappedByteBuffer.get() != EN) {
                         }
-
-                    //等待任务完成
-                    if(futureList.size() == THREAD_NUM) {
-                        final Result[] results = new Result[THREAD_NUM];
-                        try {
-                            for (int j = 0; j < THREAD_NUM; j++) {
-                                results[j] = futureList.poll().get();
-                            }
-                            resultsList.add(results);
-                        } catch (InterruptedException | ExecutionException e) {
-                            e.printStackTrace();
-                        }
+                        limit = mappedByteBuffer.position();
+                        mp += limit;
+                        mappedByteBuffer.reset();
+                        futureList.put(executorService.submit(new Task(mappedByteBuffer, limit)));
+                    } else {
+                        mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
+                        limit = (int) rest;
+                        mp = (int) fileChannel.size();
+                        futureList.put(executorService.submit(new Task(mappedByteBuffer, limit)));
                     }
+
+//                    //等待任务完成
+//                    if(futureList.size() == THREAD_NUM) {
+//                        final Result[] results = new Result[THREAD_NUM];
+//                        try {
+//                            for (int j = 0; j < THREAD_NUM; j++) {
+//                                results[j] = futureList.poll().get();
+//                            }
+//                            resultsList.add(results);
+//                        } catch (InterruptedException | ExecutionException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
 
 
 //                    int block = limit / THREAD_NUM;
@@ -127,7 +127,6 @@ public class FileParser5 {
 //                            break;
 //                        }
 //                    }
-
 
 
 //                while (!readOne) {
@@ -177,21 +176,21 @@ public class FileParser5 {
 
             }
 
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
-        //处理余下任务
-        int n = futureList.size();
-        final Result[] results = new Result[n];
-        try {
-            for (int j = 0; j < n; j++) {
-                results[j] = futureList.poll().get();
-            }
-            resultsList.add(results);
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
+//        //处理余下任务
+//        int n = futureList.size();
+//        final Result[] results = new Result[n];
+//        try {
+//            for (int j = 0; j < n; j++) {
+//                results[j] = futureList.poll().get();
+//            }
+//            resultsList.add(results);
+//        } catch (InterruptedException | ExecutionException e) {
+//            e.printStackTrace();
+//        }
 
 
         readFinish = true;
@@ -220,135 +219,74 @@ public class FileParser5 {
 //        }
 
 
-//        Result result = null;
-//        while (true) {
-//            try {
-//                if (!readFinish) {
-//                    result = futureList.take().get();
-//                } else {
-//                    Future<Result> future = futureList.poll();
-//                    if (future == null) {
-//                        break;
-//                    }
-//                    result = future.get();
-//                }
-//            } catch (InterruptedException | ExecutionException e) {
-//                e.printStackTrace();
-//            }
-
-//        while(!futureList.isEmpty()){
-//
-//            try {
-//                result = futureList.poll().get();
-//            } catch (InterruptedException | ExecutionException e) {
-//                e.printStackTrace();
-//            }
-
-        Result[] results = null;
+        Result result = null;
         while (true) {
             try {
                 if (!readFinish) {
-                    results = resultsList.take();
+                    result = futureList.take().get();
                 } else {
-                    results = resultsList.poll();
-                    if (results == null) {
+                    Future<Result> future = futureList.poll();
+                    if (future == null) {
                         break;
                     }
+                    result = future.get();
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
 
-            for (Result result : results) {
+            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
+            LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
+            LinkedList<Integer> deleteList = result.getDeleteSet();
+            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
 
-                HashIntObjMap<byte[]> insertMap = result.getInsertMap();
-                LinkedHashMap<Integer, byte[]> updateMap = result.getUpdateMap();
-                LinkedList<Integer> deleteList = result.getDeleteSet();
-                LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
+            //先处理PK变更
+            for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
+                int pk = entry.getKey();
+                int newPk = entry.getValue();
 
-                //先处理PK变更
-                for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
-                    int pk = entry.getKey();
-                    int newPk = entry.getValue();
-
-                    resultMap.put(newPk, resultMap.get(pk));
-                    resultMap.remove(pk);
-                }
-
-
-                //处理update
-                resultMap.putAll(insertMap);
-
-
-                for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
-                    int pk = entry.getKey();
-                    byte[] update = entry.getValue();
-                    byte[] record = resultMap.get(pk);
-
-
-                    for (int j = 0; j < KEY_NUM; j++) {
-                        int offset = VAL_OFFSET_ARRAY[j];
-                        if (update[offset] == 0) {
-                            continue;
-                        }
-                        int len = VAL_LEN_ARRAY[j];
-                        System.arraycopy(update, offset, record, offset, len);
-                    }
-                }
-
-                //处理delete
-                while (!deleteList.isEmpty()) {
-                    int pk = deleteList.poll();
-                    resultMap.remove(pk);
-                }
-
+                resultMap.put(newPk, resultMap.get(pk));
+                resultMap.remove(pk);
             }
+
+
+            //处理update
+            resultMap.putAll(insertMap);
+
+
+            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
+                int pk = entry.getKey();
+                byte[] update = entry.getValue();
+                byte[] record = resultMap.get(pk);
+
+
+                for (int j = 0; j < KEY_NUM; j++) {
+                    int offset = VAL_OFFSET_ARRAY[j];
+                    if (update[offset] == 0) {
+                        continue;
+                    }
+                    int len = VAL_LEN_ARRAY[j];
+                    System.arraycopy(update, offset, record, offset, len);
+                }
+            }
+
+            //处理delete
+            while (!deleteList.isEmpty()) {
+                int pk = deleteList.poll();
+                resultMap.remove(pk);
+            }
+
         }
 
-        synchronized (this){
+        synchronized (this)
+
+        {
             notifyAll();
         }
 
-//            //变更主键处理
-//            if (i < results.length - 1) {
-//                LinkedHashMap<Integer, Integer> PKChangeMap = results[i + 1].getPKChangeMap();
-//                for (Map.Entry<Integer, Integer> entry : PKChangeMap.entrySet()) {
-//                    int oldPK = entry.getKey();
-//                    int newPK = entry.getValue();
-//                    if (insertMap.containsKey(oldPK)) {
-//                        insertMap.put(newPK, insertMap.get(oldPK));
-//                        insertMap.remove(oldPK);
-//                        updateMap.put(newPK, updateMap.get(oldPK));
-//                        updateMap.remove(oldPK);
-//                    }
-//                }
-//            }
-//
-//            resultMap.putAll(insertMap);
-////            updateMapAll.putAll(updateMap);
-//            for (Map.Entry<Integer,byte[]> entry : updateMap.entrySet()){
-//                updateMapAll.put(entry.getKey(),entry.getValue());
-//            }
-//            deleteSetAll.addAll(deleteSet);
-//        }
-//
-//        for (int i : deleteSetAll) {
-//            insertMapAll.remove(i);
-//            updateMapAll.remove(i);
-//        }
-//
-//        for (Map.Entry<Integer,byte[]> entry : updateMapAll.entrySet()){
-//            int pk = entry.getKey();
-//            byte[] update = entry.getValue();
-//            byte[] insert = resultMap.get(pk);
-//
-//            for (int i = 0; i < LEN; i++) {
-//                if(update[i] != 0){
-//                    insert[i] = update[i];
-//                }
-//            }
-
     }
+
+
 
     public void showResult() {
 
