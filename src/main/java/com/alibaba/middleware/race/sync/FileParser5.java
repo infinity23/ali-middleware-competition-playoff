@@ -48,10 +48,7 @@ public class FileParser5 {
             @Override
             public void run() {
 //                Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-                long start = System.currentTimeMillis();
                 mergeResult();
-                long end = System.currentTimeMillis();
-                logger.info("mergeResult time: " + (end - start));
             }
         });
 
@@ -63,7 +60,6 @@ public class FileParser5 {
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void readPages() {
-        long startTime = System.currentTimeMillis();
         try {
             for (int i = 1; i <= 10; i++) {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
@@ -173,8 +169,7 @@ public class FileParser5 {
 //                    mergeResult();
 
                 }
-
-                logger.info("fileParser has read " + i);
+            logger.info("fileParser has read " + i);
 
             }
 
@@ -196,9 +191,6 @@ public class FileParser5 {
 
 
         readFinish = true;
-        long endTime = System.currentTimeMillis();
-
-        logger.info("readPages time: " + (endTime - startTime));
 
     }
 
@@ -268,9 +260,26 @@ public class FileParser5 {
                 resultMap.remove(pk);
             }
 
+            //处理delete
+//            while (!deleteList.isEmpty()) {
+//                int pk = deleteList.poll();
+//                resultMap.remove(pk);
+//            }
+
+            n = deleteList.size();
+            for (int i = 0; i < n; i++) {
+                int pk = deleteList.get(i);
+                resultMap.remove(pk);
+                insertMap.remove(pk);
+                updateMap.remove(pk);
+            }
+
+
+            //合并insert
+            resultMap.putAll(insertMap);
+
 
             //处理update
-            resultMap.putAll(insertMap);
 
 
 //            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
@@ -294,10 +303,12 @@ public class FileParser5 {
             for (int i = 0; i < n; i++) {
                 int pk = updateList.get(i);
                 byte[] record = resultMap.get(pk);
-                if (record == null){
+
+                byte[] update = updateMap.get(pk);
+
+                if (record == null || update == null){
                     continue;
                 }
-                byte[] update = updateMap.get(pk);
 
                 for (int j = 0; j < KEY_NUM; j++) {
                     int offset = VAL_OFFSET_ARRAY[j];
@@ -310,17 +321,7 @@ public class FileParser5 {
             }
 
 
-            //处理delete
-//            while (!deleteList.isEmpty()) {
-//                int pk = deleteList.poll();
-//                resultMap.remove(pk);
-//            }
 
-            n = deleteList.size();
-            for (int i = 0; i < n; i++) {
-                int pk = deleteList.get(i);
-                resultMap.remove(pk);
-            }
 
         }
 
@@ -345,7 +346,8 @@ public class FileParser5 {
         }
 
 
-        List<Integer> pkList = new ArrayList<>();
+        long start = System.currentTimeMillis();
+        List<Integer> pkList = new ArrayList<>(121000);
         for (int l : resultMap.keySet()) {
             if (l <= lo || l >= hi) {
                 continue;
@@ -353,9 +355,14 @@ public class FileParser5 {
             pkList.add(l);
         }
         Collections.sort(pkList);
+        long end = System.currentTimeMillis();
+        logger.info("sort time: " + (end -start));
+
 
         ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(40 * 1024 * 1024);
-        for (int pk : pkList) {
+        int size = pkList.size();
+        for (int j = 0; j < size; j++) {
+            int pk = pkList.get(j);
             byte[] record = resultMap.get(pk);
             buf.writeBytes(String.valueOf(pk).getBytes());
             for (int i = 0; i < KEY_NUM; i++) {
