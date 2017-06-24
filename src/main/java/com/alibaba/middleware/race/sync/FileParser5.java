@@ -371,8 +371,7 @@ public class FileParser5 {
             buf.writeByte('\n');
         }
 
-        //log
-//        logger.info("result 大小： " + buf.readableBytes());
+        logger.info("result 大小： " + buf.readableBytes());
 
         ChannelFuture future = Server.channel.writeAndFlush(buf);
         future.addListener(ChannelFutureListener.CLOSE);

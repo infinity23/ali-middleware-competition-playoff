@@ -22,7 +22,7 @@ public class Task implements Callable<Result>{
 //    private int start;
 //    private int len;
 
-//    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(100000);
+//    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(128 * 1024);
     private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(128 * 1024);
     private ArrayList<Integer> updateList = new ArrayList<>(128 * 1024);
 //    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
@@ -34,7 +34,13 @@ public class Task implements Callable<Result>{
 
     private ConcurrentHashMap<Integer, byte[]> resultMap;
 
-//
+    private MappedByteBuffer mappedByteBuffer;
+
+    private int limit;
+
+//    private static byte threadNum;
+
+    //
 //    public Task(byte[] mappedByteBuffer, int start, int len, ConcurrentHashMap<Integer, byte[]> resultMap) {
 //        this.mappedByteBuffer = mappedByteBuffer;
 //        this.start = start;
@@ -46,11 +52,9 @@ public class Task implements Callable<Result>{
 //        this.start = start;
 //        this.len = len;
 //    }
-    
-    private MappedByteBuffer mappedByteBuffer;
-    private int limit;
-    
+
     public Task(ConcurrentHashMap<Integer, byte[]> resultMap, MappedByteBuffer mappedByteBuffer, int limit) {
+//        threadNum %= 16;
         this.resultMap = resultMap;
         this.mappedByteBuffer = mappedByteBuffer;
         this.limit = limit;
@@ -65,7 +69,6 @@ public class Task implements Callable<Result>{
     }
 
 
-    private int index;
     public void read() {
 
             while (mappedByteBuffer.position() < limit) {
@@ -82,6 +85,8 @@ public class Task implements Callable<Result>{
                     byte[] record = new byte[LEN];
 
                     parseInsertKeyValue(mappedByteBuffer, record);
+
+//                    record[0] = threadNum;
 
 //                    insertMap.put(pk, record);
                     resultMap.put(pk, record);
@@ -115,10 +120,10 @@ public class Task implements Callable<Result>{
 //                        parseUpdateKeyValue(mappedByteBuffer, insertMap.get(pk));
 //                        continue;
 //                    }
-                    if(resultMap.containsKey(pk)){
-                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
-                        continue;
-                    }
+//                    if(resultMap.containsKey(pk)){
+//                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
+//                        continue;
+//                    }
 
                     byte[] update;
                     if(!updateMap.containsKey(pk)){
