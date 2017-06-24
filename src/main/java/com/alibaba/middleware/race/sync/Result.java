@@ -34,6 +34,13 @@ public class Result {
         this.newPKList = newPKList;
         this.deleteList = deleteList;
     }
+    public Result(HashIntObjMap<byte[]> updateMap, ArrayList<Integer> updateList, ArrayList<Integer> oldPKList, ArrayList<Integer> newPKList, ArrayList<Integer> deleteList) {
+        this.updateMap = updateMap;
+        this.updateList = updateList;
+        this.oldPKList = oldPKList;
+        this.newPKList = newPKList;
+        this.deleteList = deleteList;
+    }
 
 //    public HashIntObjMap<byte[]> getInsertMap() {
 //        return insertMap;

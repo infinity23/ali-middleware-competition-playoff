@@ -6,6 +6,7 @@ import com.koloboke.collect.map.hash.HashIntObjMaps;
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
@@ -21,17 +22,17 @@ public class Task implements Callable<Result>{
 //    private int start;
 //    private int len;
 
-    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap();
-    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap();
-    private ArrayList<Integer> updateList = new ArrayList<>();
+//    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(100000);
+    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(100000);
+    private ArrayList<Integer> updateList = new ArrayList<>(100000);
 //    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
 //    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
-    private ArrayList<Integer> oldPKList = new ArrayList<>();
-    private ArrayList<Integer> newPKList = new ArrayList<>();
+    private ArrayList<Integer> oldPKList = new ArrayList<>(100000);
+    private ArrayList<Integer> newPKList = new ArrayList<>(100000);
 //    private LinkedList<Integer> deleteList = new LinkedList<>();
-    private ArrayList<Integer> deleteList = new ArrayList<>();
+    private ArrayList<Integer> deleteList = new ArrayList<>(100000);
 
-//    private ConcurrentHashMap<Integer, byte[]> resultMap;
+    private ConcurrentHashMap<Integer, byte[]> resultMap;
 
 //
 //    public Task(byte[] mappedByteBuffer, int start, int len, ConcurrentHashMap<Integer, byte[]> resultMap) {
@@ -49,7 +50,8 @@ public class Task implements Callable<Result>{
     private MappedByteBuffer mappedByteBuffer;
     private int limit;
     
-    public Task(MappedByteBuffer mappedByteBuffer, int limit) {
+    public Task(ConcurrentHashMap<Integer, byte[]> resultMap, MappedByteBuffer mappedByteBuffer, int limit) {
+        this.resultMap = resultMap;
         this.mappedByteBuffer = mappedByteBuffer;
         this.limit = limit;
     }
@@ -58,7 +60,8 @@ public class Task implements Callable<Result>{
     public Result call() throws Exception {
         read();
 //        return new Result(insertMap,updateMap,PKChangeMap,deleteList);
-        return new Result(insertMap,updateMap,updateList,oldPKList, newPKList,deleteList);
+//        return new Result(insertMap,updateMap,updateList,oldPKList, newPKList,deleteList);
+        return new Result(updateMap,updateList,oldPKList, newPKList,deleteList);
     }
 
 
@@ -80,8 +83,8 @@ public class Task implements Callable<Result>{
 
                     parseInsertKeyValue(mappedByteBuffer, record);
 
-                    insertMap.put(pk, record);
-//                    resultMap.put(pk, record);
+//                    insertMap.put(pk, record);
+                    resultMap.put(pk, record);
 
                 } else if (operation == 'U') {
                     pk = parsePK(mappedByteBuffer);
@@ -100,16 +103,20 @@ public class Task implements Callable<Result>{
 //                            updateMap.remove(pk);
                         }
 
-                        if(insertMap.containsKey(pk)) {
-                            insertMap.put(newPK, insertMap.get(pk));
-                            insertMap.remove(pk);
-                        }
+//                        if(insertMap.containsKey(pk)) {
+//                            insertMap.put(newPK, insertMap.get(pk));
+//                            insertMap.remove(pk);
+//                        }
 
                         pk = newPK;
                     }
 
-                    if(insertMap.containsKey(pk)){
-                        parseUpdateKeyValue(mappedByteBuffer, insertMap.get(pk));
+//                    if(insertMap.containsKey(pk)){
+//                        parseUpdateKeyValue(mappedByteBuffer, insertMap.get(pk));
+//                        continue;
+//                    }
+                    if(resultMap.containsKey(pk)){
+                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
                         continue;
                     }
 

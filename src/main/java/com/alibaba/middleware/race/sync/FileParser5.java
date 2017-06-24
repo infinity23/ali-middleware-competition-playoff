@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
-import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -35,8 +34,8 @@ public class FileParser5 {
 
     //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
-    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
-    //    private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>();
+//    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
+        private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
     private boolean mergeResultStart;
     private boolean readFinish;
 
@@ -82,12 +81,12 @@ public class FileParser5 {
                         limit = mappedByteBuffer.position();
                         mp += limit;
                         mappedByteBuffer.reset();
-                        futureList.put(executorService.submit(new Task(mappedByteBuffer, limit)));
+                        futureList.put(executorService.submit(new Task(resultMap, mappedByteBuffer, limit)));
                     } else {
                         mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
                         limit = (int) rest;
                         mp = (int) fileChannel.size();
-                        futureList.put(executorService.submit(new Task(mappedByteBuffer, limit)));
+                        futureList.put(executorService.submit(new Task(resultMap, mappedByteBuffer, limit)));
                     }
 
 //                    //等待任务完成
@@ -169,6 +168,7 @@ public class FileParser5 {
 //                    mergeResult();
 
                 }
+
             logger.info("fileParser has read " + i);
 
             }
@@ -260,26 +260,9 @@ public class FileParser5 {
                 resultMap.remove(pk);
             }
 
-            //处理delete
-//            while (!deleteList.isEmpty()) {
-//                int pk = deleteList.poll();
-//                resultMap.remove(pk);
-//            }
-
-            n = deleteList.size();
-            for (int i = 0; i < n; i++) {
-                int pk = deleteList.get(i);
-                resultMap.remove(pk);
-                insertMap.remove(pk);
-                updateMap.remove(pk);
-            }
-
-
-            //合并insert
-            resultMap.putAll(insertMap);
-
 
             //处理update
+//            resultMap.putAll(insertMap);
 
 
 //            for (Map.Entry<Integer, byte[]> entry : updateMap.entrySet()) {
@@ -303,12 +286,10 @@ public class FileParser5 {
             for (int i = 0; i < n; i++) {
                 int pk = updateList.get(i);
                 byte[] record = resultMap.get(pk);
-
-                byte[] update = updateMap.get(pk);
-
-                if (record == null || update == null){
+                if (record == null){
                     continue;
                 }
+                byte[] update = updateMap.get(pk);
 
                 for (int j = 0; j < KEY_NUM; j++) {
                     int offset = VAL_OFFSET_ARRAY[j];
@@ -321,7 +302,17 @@ public class FileParser5 {
             }
 
 
+            //处理delete
+//            while (!deleteList.isEmpty()) {
+//                int pk = deleteList.poll();
+//                resultMap.remove(pk);
+//            }
 
+            n = deleteList.size();
+            for (int i = 0; i < n; i++) {
+                int pk = deleteList.get(i);
+                resultMap.remove(pk);
+            }
 
         }
 
