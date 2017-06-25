@@ -64,7 +64,6 @@ public class FileParser8 {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
                 FileChannel fileChannel = randomAccessFile.getChannel();
 
-                boolean readOne = false;
                 int mp = 0;
                 MappedByteBuffer mappedByteBuffer;
                 int block = DIRECT_CACHE / THREAD_NUM;
@@ -235,7 +234,6 @@ public class FileParser8 {
 //            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
 
 
-            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
             HashIntObjMap<byte[]> updateMap = result.getUpdateMap();
             ArrayList<Integer> updateList = result.getUpdateList();
             ArrayList<Integer> oldPKList = result.getOldPKList();

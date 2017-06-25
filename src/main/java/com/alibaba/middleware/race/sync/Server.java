@@ -16,7 +16,7 @@ public class Server {
     private static int end;
     static Channel channel;
 
-    static Logger logger = LoggerFactory.getLogger(Server.class);
+    Logger logger = LoggerFactory.getLogger(Server.class);
 
 
     // 保存channel
@@ -45,7 +45,7 @@ public class Server {
 
 
         Server server = new Server();
-        logger.info("com.alibaba.middleware.race.sync.Server is running....");
+//        logger.info("com.alibaba.middleware.race.sync.Server is running....");
         server.startServer(5527);
 
 
@@ -56,19 +56,19 @@ public class Server {
      * 上面表示，查询的schema为middleware，查询的表为student,主键的查询范围是(100,200)，注意是开区间 对应DB的SQL为： select * from middleware.student where
      * id>100 and id<200
      */
-    private static void printInput(String[] args) {
-
-
-        // 第一个参数是Schema Name
-        logger.info("Schema:" + args[0]);
-        // 第二个参数是Schema Name
-        logger.info("table:" + args[1]);
-        // 第三个参数是start pk Id
-        logger.info("start:" + args[2]);
-        // 第四个参数是end pk Id
-        logger.info("end:" + args[3]);
-
-    }
+//    private static void printInput(String[] args) {
+//
+//
+//        // 第一个参数是Schema Name
+//        logger.info("Schema:" + args[0]);
+//        // 第二个参数是Schema Name
+//        logger.info("table:" + args[1]);
+//        // 第三个参数是start pk Id
+//        logger.info("start:" + args[2]);
+//        // 第四个参数是end pk Id
+//        logger.info("end:" + args[3]);
+//
+//    }
 
     /**
      * 初始化系统属性
@@ -91,7 +91,7 @@ public class Server {
 
                     .option(ChannelOption.SO_BACKLOG,1024)
                     .option(ChannelOption.SO_REUSEADDR, true)
-//                    .childOption(ChannelOption.SO_TIMEOUT, 6000)
+//                    .option(ChannelOption.SO_TIMEOUT, 6000)
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childOption(ChannelOption.TCP_NODELAY, true)
                     .childOption(ChannelOption.SO_SNDBUF, 256 * 1024)

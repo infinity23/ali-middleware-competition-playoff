@@ -79,28 +79,27 @@ public class Task3 implements Callable<Result> {
 
 
     public void read() {
+        byte operation;
+        int pk;
+        byte[] record;
 
         while (mappedByteBuffer.position() < limit) {
 
-            char operation = parseOperation(mappedByteBuffer);
+            operation = parseOperation(mappedByteBuffer);
 
-            int pk;
-            if (operation == 'I') {
+            if (operation == CHAR_I) {
                 //null|
-                skipNBytes(mappedByteBuffer, 5);
+                skipNBytes(mappedByteBuffer, NULL_LEN);
 
                 pk = parsePK(mappedByteBuffer);
 
-                byte[] record = new byte[LEN];
+                record = new byte[LEN];
 
                 parseInsertKeyValue(mappedByteBuffer, record);
 
-//                    record[0] = threadNum;
-
-//                    insertMap.put(pk, record);
                 resultMap.put(pk, record);
 
-            } else if (operation == 'U') {
+            } else if (operation == CHAR_U) {
                 pk = parsePK(mappedByteBuffer);
                 int newPK = parsePK(mappedByteBuffer);
 
@@ -108,32 +107,22 @@ public class Task3 implements Callable<Result> {
                 //处理主键变更
                 if (pk != newPK) {
 
-//                        PKChangeMap.put(pk,newPK);
                     oldPKList.add(pk);
                     newPKList.add(newPK);
+
                     if (updateMap.containsKey(pk)) {
                         updateMap.put(newPK, updateMap.get(pk));
                         updateList.add(newPK);
 //                            updateMap.remove(pk);
                     }
 
-//                        if(insertMap.containsKey(pk)) {
-//                            insertMap.put(newPK, insertMap.get(pk));
-//                            insertMap.remove(pk);
-//                        }
-
                     pk = newPK;
                 }
 
-//                    if(insertMap.containsKey(pk)){
-//                        parseUpdateKeyValue(mappedByteBuffer, insertMap.get(pk));
-//                        continue;
-//                    }
-
-                    if (resultMap.containsKey(pk)) {
-                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
-                        continue;
-                    }
+                if (resultMap.containsKey(pk)) {
+                    parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
+                    continue;
+                }
 
                 byte[] update;
                 if (!updateMap.containsKey(pk)) {
@@ -145,23 +134,15 @@ public class Task3 implements Callable<Result> {
                 }
                 parseUpdateKeyValue(mappedByteBuffer, update);
 
-            } else if (operation == 'D') {
+            } else {
                 pk = parsePK(mappedByteBuffer);
 
-//                    if(insertMap.containsKey(pk)) {
-//                        insertMap.remove(pk);
-//                        updateMap.remove(pk);
-//                    }else {
-//                        deleteList.add(pk);
-//                    }
 
                 deleteList.add(pk);
 
                 //跳过剩余
                 skipNBytes(mappedByteBuffer, SUFFIX);
                 seekForEN(mappedByteBuffer);
-            } else {
-                throw new RuntimeException("parse operation error");
             }
 
         }
@@ -204,7 +185,7 @@ public class Task3 implements Callable<Result> {
     private void parseInsertKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
 
         for (int i = 0; i < KEY_NUM; i++) {
-            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
+            skipNBytes(mappedByteBuffer, KEY_LEN_INSERT_ARRAY[i]);
             fillArrayInsert(mappedByteBuffer, record, i);
         }
 
@@ -301,17 +282,16 @@ public class Task3 implements Callable<Result> {
     }
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private char parseOperation(MappedByteBuffer mappedByteBuffer) {
+    private byte parseOperation(MappedByteBuffer mappedByteBuffer) {
         //跳过前缀(55 - 62)
-//        seekForSP(mappedByteBuffer, 5);
-        skipNBytes(mappedByteBuffer, 54);
+        skipNBytes(mappedByteBuffer, PREFIX);
         seekForSP(mappedByteBuffer);
 
-        char op = (char) mappedByteBuffer.get();
+        byte op = mappedByteBuffer.get();
 
         //为parsePK做准备
 //        seekForSP(mappedByteBuffer, 2);
-        skipNBytes(mappedByteBuffer, PK_NAME_LEN + 2);
+        skipNBytes(mappedByteBuffer, PK_NAME_LEN_WITH_NULL);
 
         return op;
     }

@@ -7,6 +7,11 @@ interface Cons {
     // '0'
     byte CHAR_ZERO = 48;
 
+    byte CHAR_I = 73;
+
+    byte CHAR_U = 85;
+
+    byte CHAR_D = 68;
 
 
     //实际长度|VAL_LEN
@@ -31,7 +36,6 @@ interface Cons {
     byte LEN = VAl1_LEN + VAL2_LEN + VAL3_LEN + VAL4_LEN + VAL5_LEN + 10;
 
 
-
 //    byte VAl1_LEN = 3;
 //    byte VAL1_OFFSET = 1;
 //
@@ -50,10 +54,8 @@ interface Cons {
 //    byte LEN = VAl1_LEN + VAL2_LEN + VAL3_LEN + VAL4_LEN + VAL5_LEN + 5;
 
 
-
-
-    byte[] VAL_LEN_ARRAY = new byte[]{VAl1_LEN,VAL2_LEN,VAL3_LEN,VAL4_LEN,VAL5_LEN};
-    byte[] VAL_OFFSET_ARRAY = new byte[]{VAL1_OFFSET,VAL2_OFFSET,VAL3_OFFSET,VAL4_OFFSET,VAL5_OFFSET};
+    byte[] VAL_LEN_ARRAY = new byte[]{VAl1_LEN, VAL2_LEN, VAL3_LEN, VAL4_LEN, VAL5_LEN};
+    byte[] VAL_OFFSET_ARRAY = new byte[]{VAL1_OFFSET, VAL2_OFFSET, VAL3_OFFSET, VAL4_OFFSET, VAL5_OFFSET};
 
     byte KEY1_LEN = 14;
 
@@ -66,12 +68,18 @@ interface Cons {
     byte KEY5_LEN = 10;
 
 
-    byte[] KEY_LEN_ARRAY = new byte[]{KEY1_LEN,KEY2_LEN,KEY3_LEN,KEY4_LEN,KEY5_LEN};
+    byte[] KEY_LEN_ARRAY = new byte[]{KEY1_LEN, KEY2_LEN, KEY3_LEN, KEY4_LEN, KEY5_LEN};
+    byte[] KEY_LEN_INSERT_ARRAY = new byte[]{KEY1_LEN + 6, KEY2_LEN + 6, KEY3_LEN + 6, KEY4_LEN + 6, KEY5_LEN + 6};
 
 
-    int PK_NAME_LEN = 6;
+    byte PK_NAME_LEN = 6;
+    byte PK_NAME_LEN_WITH_NULL = 8;
 
+    //NULL|
+    byte NULL_LEN = 5;
 
+    //跳过前缀(55 - 62)
+    int PREFIX = 54;
 
 
     //    属性约定表,用索引指代属性(赛题)
@@ -102,15 +110,6 @@ interface Cons {
 //            put((byte) 4, "score2".getBytes(CHARSET));
 //        }
 //    };
-
-
-
-
-
-
-
-
-
 
 
 }
