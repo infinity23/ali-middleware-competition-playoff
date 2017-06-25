@@ -1,6 +1,7 @@
 package com.alibaba.middleware.race.sync;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -8,18 +9,14 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
-
-import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
-
 public class Server {
     private static String schema;
     private static String table;
     private static int start;
     private static int end;
     static Channel channel;
+
+    static Logger logger = LoggerFactory.getLogger(Server.class);
 
 
     // 保存channel
@@ -37,7 +34,6 @@ public class Server {
 //    }
 
 
-
     public static void main(String[] args) throws InterruptedException {
         initProperties();
 //        printInput(args);
@@ -47,7 +43,6 @@ public class Server {
 //        start = Integer.parseInt(args[2]);
 //        end = Integer.parseInt(args[3]);
 
-        Logger logger = LoggerFactory.getLogger(Server.class);
 
         Server server = new Server();
         logger.info("com.alibaba.middleware.race.sync.Server is running....");
@@ -63,7 +58,6 @@ public class Server {
      */
     private static void printInput(String[] args) {
 
-        Logger logger = LoggerFactory.getLogger(Server.class);
 
         // 第一个参数是Schema Name
         logger.info("Schema:" + args[0]);
@@ -93,36 +87,41 @@ public class Server {
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel.class)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) throws Exception {
-                        // 注册handler
-                        ch.pipeline().addLast(new ServerDemoInHandler(schema, table, start, end));
-                        // ch.pipeline().addLast(new ServerDemoOutHandler());
-                    }
-                })
-                .option(ChannelOption.SO_BACKLOG, 128)
+                    .channel(NioServerSocketChannel.class)
+
+                    .option(ChannelOption.SO_BACKLOG,1024)
+                    .option(ChannelOption.SO_REUSEADDR, true)
+                    .childOption(ChannelOption.SO_TIMEOUT, 6000)
+                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .childOption(ChannelOption.TCP_NODELAY, true)
+                    .childOption(ChannelOption.SO_SNDBUF, 256 * 1024)
+                    .childOption(ChannelOption.SO_RCVBUF, 256 * 1024)
+                    .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            // 注册handler
+                            ch.pipeline().addLast(new ServerDemoInHandler(schema, table, start, end));
+                            // ch.pipeline().addLast(new ServerDemoOutHandler());
+                        }
+                    });
 //                    .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024 * 1024 * 500,1024 * 1024 * 500))
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             ChannelFuture f = b.bind(port).sync();
-//
-            Logger logger = LoggerFactory.getLogger(Server.class);
 
             long parseStart = System.currentTimeMillis();
             try {
                 parseFile();
-            }catch (Exception e){
-                logger.error("parseFile error",e);
+            } catch (Exception e) {
+                logger.error("parseFile error", e);
             }
+
             long parseEnd = System.currentTimeMillis();
             logger.info("parseFile time: " + (parseEnd - parseStart));
 
 //            writeFile();
             f.channel().closeFuture().sync();
-
-
 
         } finally {
             workerGroup.shutdownGracefully();
@@ -130,8 +129,7 @@ public class Server {
         }
     }
 
-    private void parseFile(){
-        Logger logger = LoggerFactory.getLogger(Server.class);
+    private void parseFile() {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
@@ -149,19 +147,18 @@ public class Server {
 //        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
     }
 
-    private void writeFile(){
-        Logger logger = LoggerFactory.getLogger(Server.class);
-        try {
-            String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
-            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
-            FileChannel fileChannel = randomAccessFile.getChannel();
-            FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
-
-            final ChannelFuture future2 = channel.writeAndFlush(fileRegion);
-            future2.addListener(ChannelFutureListener.CLOSE);
-        }catch (IOException e){
-            logger.error("writeFile error",e);
-        }
-    }
+//    private void writeFile(){
+//        try {
+//            String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
+//            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
+//            FileChannel fileChannel = randomAccessFile.getChannel();
+//            FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
+//
+//            final ChannelFuture future2 = channel.writeAndFlush(fileRegion);
+//            future2.addListener(ChannelFutureListener.CLOSE);
+//        }catch (IOException e){
+//            logger.error("writeFile error",e);
+//        }
+//    }
 
 }

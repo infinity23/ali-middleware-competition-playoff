@@ -13,7 +13,7 @@ public class Client {
     private final static int port = Constants.SERVER_PORT;
     // idle时间
     private static String ip;
-    private EventLoopGroup loop = new NioEventLoopGroup();
+//    private EventLoopGroup loop = new NioEventLoopGroup();
     private static Logger logger = LoggerFactory.getLogger(Client.class);
 
 
@@ -23,7 +23,8 @@ public class Client {
         ip = args[0];
         Client client = new Client();
         client.connect(ip, port);
-        logger.info("client connect...");
+        logger.info("关闭连接");
+        System.exit(0);
     }
 
     /**
@@ -45,14 +46,17 @@ public class Client {
      */
     public void connect(String host, int port) throws Exception {
         EventLoopGroup workerGroup = new NioEventLoopGroup();
-
         try {
             Bootstrap b = new Bootstrap();
             b.group(workerGroup);
             b.channel(NioSocketChannel.class);
-            b.option(ChannelOption.SO_KEEPALIVE, true)
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
-//                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(1024 * 1024 * 100));
+            b.option(ChannelOption.TCP_NODELAY, true)
+                    .option(ChannelOption.SO_KEEPALIVE, false)
+                    .option(ChannelOption.SO_SNDBUF, 256 * 1024)
+                    .option(ChannelOption.SO_RCVBUF, 256 * 1024)
+                                .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
+//                                .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(40 * 1024 * 1024));
+
             b.handler(new ChannelInitializer<SocketChannel>() {
 
                 @Override
@@ -79,6 +83,8 @@ public class Client {
         } finally {
             workerGroup.shutdownGracefully();
         }
+
+
 
 
 
