@@ -135,7 +135,7 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser7 fileParser = new FileParser7();
+        FileParser8 fileParser = new FileParser8();
 
 //        for (int i = 1; i <= 10; i++) {
 //            fileParser.readPage((byte) i);
