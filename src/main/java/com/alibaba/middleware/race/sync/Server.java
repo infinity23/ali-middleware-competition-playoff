@@ -91,7 +91,7 @@ public class Server {
 
                     .option(ChannelOption.SO_BACKLOG,1024)
                     .option(ChannelOption.SO_REUSEADDR, true)
-                    .childOption(ChannelOption.SO_TIMEOUT, 6000)
+//                    .childOption(ChannelOption.SO_TIMEOUT, 6000)
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childOption(ChannelOption.TCP_NODELAY, true)
                     .childOption(ChannelOption.SO_SNDBUF, 256 * 1024)
