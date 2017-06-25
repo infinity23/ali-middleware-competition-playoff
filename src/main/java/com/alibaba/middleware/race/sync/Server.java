@@ -135,7 +135,7 @@ public class Server {
 
         logger.info("start fileParser...");
 //        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser5 fileParser = new FileParser5();
+        FileParser7 fileParser = new FileParser7();
 
 //        for (int i = 1; i <= 10; i++) {
 //            fileParser.readPage((byte) i);
@@ -144,9 +144,9 @@ public class Server {
 
         fileParser.readPages();
 
-        logger.info("start showResult...");
-        fileParser.showResult();
-        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
+//        logger.info("start showResult...");
+//        fileParser.showResult();
+//        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
     }
 
     private void writeFile(){

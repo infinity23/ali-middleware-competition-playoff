@@ -115,6 +115,8 @@ public class FileParser6 {
                 e.printStackTrace();
             }
 
+            showResult();
+
 
     }
 
