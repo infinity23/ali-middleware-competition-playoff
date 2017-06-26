@@ -34,6 +34,7 @@ public class FileParser2 {
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
     private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
     private char lastOperation;
+    private boolean pkChangeStart;
 
 
     public FileParser2() {
@@ -57,10 +58,11 @@ public class FileParser2 {
 
                 char operation = parseOperation(mappedByteBuffer);
 
-                if (lastOperation != operation) {
-                    logger.info("operation change : " + lastOperation + " to " + operation);
-                    logger.info("position: " + position + "   fileName   " + fileName);
+                if(pkChangeStart && lastOperation != operation){
+                    logger.info("PKChange end: " + lastOperation + " to " + operation + " position: " + position + " fileName "+fileName);
+                    pkChangeStart = false;
                 }
+
 
                 if (operation == 'I') {
                     //null|
@@ -78,8 +80,9 @@ public class FileParser2 {
                     //处理主键变更
                     if (pk != newPK) {
 
-                        if(operation != lastOperation){
-                            logger.info("U is a PKChange");
+                        if (lastOperation != operation) {
+                            logger.info("PKChange start: " + lastOperation + " to " + operation + " position: " + position + " fileName "+fileName);
+                            pkChangeStart = true;
                         }
 
                         resultMap.put(newPK, resultMap.get(pk));
