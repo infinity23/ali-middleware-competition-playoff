@@ -12,7 +12,7 @@ interface Constants {
     //':'
     byte CO = 58;
 
-    int DIRECT_CACHE = 200 * 1024 * 1024;
+    int DIRECT_CACHE = 50 * 1024 * 1024;
 
     // ------------ 本地测试可以使用自己的路径--------------//
 ////         工作主目录
@@ -72,6 +72,10 @@ interface Constants {
 
     //后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
     int SUFFIX = 104;
+
+    //PKChange针对优化
+    int PK_CHANGE_START = 1096004908;
+
 
     // server端口
     Integer SERVER_PORT = 5527;

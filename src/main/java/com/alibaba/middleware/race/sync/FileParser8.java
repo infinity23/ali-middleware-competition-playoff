@@ -38,6 +38,9 @@ public class FileParser8 {
         private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
     private boolean mergeResultStart;
     private boolean readFinish;
+    private int updateTotal;
+    private int pkchangeTotal;
+    private int deleteTotal;
 
     public FileParser8() {
         System.getProperties().put("file.encoding", "UTF-8");
@@ -54,7 +57,7 @@ public class FileParser8 {
     }
 
     //    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
-    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
+    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM * 4);
 //    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -67,8 +70,12 @@ public class FileParser8 {
                 int mp = 0;
                 MappedByteBuffer mappedByteBuffer;
                 int block = DIRECT_CACHE / THREAD_NUM;
-
-                while (mp < fileChannel.size()) {
+                long size = fileChannel.size();
+                //PKChange针对优化
+                if(i == 10){
+                    size = PK_CHANGE_START;
+                }
+                while (mp < size) {
                     long rest = fileChannel.size() - mp;
                     int limit;
                     if (rest >= block) {
@@ -84,8 +91,16 @@ public class FileParser8 {
                     } else {
                         mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
                         limit = (int) rest;
-                        mp = (int) fileChannel.size();
+                        mp = (int) size;
                         futureList.put(executorService.submit(new Task3(resultMap, mappedByteBuffer, limit)));
+
+                        //PKChange针对优化
+                        if(i == 10){
+                            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, PK_CHANGE_START, size - PK_CHANGE_START);
+                            limit = (int) (size - PK_CHANGE_START);
+                            mp = (int) size;
+                            futureList.put(executorService.submit(new Task3(resultMap, mappedByteBuffer, limit)));
+                        }
                     }
 
 //                    //等待任务完成
@@ -239,7 +254,12 @@ public class FileParser8 {
             ArrayList<Integer> oldPKList = result.getOldPKList();
             ArrayList<Integer> newPKList = result.getNewPKList();
             ArrayList<Integer> deleteList = result.getDeleteList();
-            
+
+            updateTotal += updateList.size();
+            pkchangeTotal += oldPKList.size();
+            deleteTotal += deleteList.size();
+
+
 
             //先处理PK变更
 //            for (Map.Entry<Integer, Integer> entry : PKchangeMap.entrySet()) {
@@ -314,6 +334,10 @@ public class FileParser8 {
 
         }
 
+        logger.info("updateTotal: " + updateTotal);
+        logger.info("pkchangeTotal: " + pkchangeTotal);
+        logger.info("deleteTotal: " + deleteTotal);
+
        showResult();
 
     }
@@ -322,8 +346,7 @@ public class FileParser8 {
 
     public void showResult() {
 
-        long start = System.currentTimeMillis();
-        List<Integer> pkList = new ArrayList<>(121000);
+        List<Integer> pkList = new ArrayList<>(128 * 1024);
         for (int l : resultMap.keySet()) {
             if (l <= lo || l >= hi) {
                 continue;
@@ -331,9 +354,7 @@ public class FileParser8 {
             pkList.add(l);
         }
         Collections.sort(pkList);
-        long end = System.currentTimeMillis();
-        logger.info("sort time: " + (end -start));
-
+        logger.info("pkList size: " + pkList.size());
 
         ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(40 * 1024 * 1024);
         int size = pkList.size();

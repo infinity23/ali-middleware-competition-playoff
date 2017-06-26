@@ -132,20 +132,20 @@ public class Server {
     private void parseFile() {
 
 //        logger.info("start fileParser...");
-        FileParser2 fileParser = new FileParser2();
-
-        for (int i = 1; i <= 10; i++) {
-            fileParser.readPage((byte) i);
+//        FileParser2 fileParser = new FileParser2();
+//
+//        for (int i = 1; i <= 10; i++) {
+//            fileParser.readPage((byte) i);
 //            logger.info("fileParser has read " + i);
-        }
-
+//        }
+//
 //        logger.info("start showResult...");
-        fileParser.showResult();
+//        fileParser.showResult();
 //        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
 
 
-//        FileParser8 fileParser = new FileParser8();
-//        fileParser.readPages();
+        FileParser8 fileParser = new FileParser8();
+        fileParser.readPages();
     }
 
 //    private void writeFile(){
