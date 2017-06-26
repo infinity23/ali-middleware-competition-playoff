@@ -9,6 +9,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
+
 public class Server {
     private static String schema;
     private static String table;
@@ -132,19 +134,20 @@ public class Server {
     private void parseFile() {
 
         logger.info("start fileParser...");
-//        FileParser fileParser = new FileParser(schema,table,start,end);
-        FileParser8 fileParser = new FileParser8();
+        FileParser2 fileParser = new FileParser2();
 
-//        for (int i = 1; i <= 10; i++) {
-//            fileParser.readPage((byte) i);
-//            logger.info("fileParser has read " + i);
-//        }
+        for (int i = 1; i <= 10; i++) {
+            fileParser.readPage((byte) i);
+            logger.info("fileParser has read " + i);
+        }
 
-        fileParser.readPages();
+        logger.info("start showResult...");
+        fileParser.showResult();
+        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
 
-//        logger.info("start showResult...");
-//        fileParser.showResult();
-//        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
+
+//        FileParser8 fileParser = new FileParser8();
+//        fileParser.readPages();
     }
 
 //    private void writeFile(){

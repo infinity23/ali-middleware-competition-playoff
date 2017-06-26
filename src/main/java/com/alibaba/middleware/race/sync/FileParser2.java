@@ -30,9 +30,10 @@ public class FileParser2 {
     private Logger logger = LoggerFactory.getLogger(Server.class);
 
 
-//        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
+    //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
     private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
+    private char lastOperation;
 
 
     public FileParser2() {
@@ -41,6 +42,8 @@ public class FileParser2 {
         System.getProperties().put("file.decoding", "UTF-8");
     }
 
+    int pk;
+    int newPK;
 
     public void readPage(byte fileName) {
         try {
@@ -50,9 +53,15 @@ public class FileParser2 {
 
             while (mappedByteBuffer.hasRemaining()) {
 
+                int position = mappedByteBuffer.position();
+
                 char operation = parseOperation(mappedByteBuffer);
 
-                int pk;
+                if (lastOperation != operation) {
+                    logger.info("operation change : " + lastOperation + " to " + operation);
+                    logger.info("position: " + position + "   fileName   " + fileName);
+                }
+
                 if (operation == 'I') {
                     //null|
                     skipNBytes(mappedByteBuffer, 5);
@@ -64,10 +73,15 @@ public class FileParser2 {
                     resultMap.put(pk, record);
                 } else if (operation == 'U') {
                     pk = parsePK(mappedByteBuffer);
-                    int newPK = parsePK(mappedByteBuffer);
+                    newPK = parsePK(mappedByteBuffer);
 
                     //处理主键变更
                     if (pk != newPK) {
+
+                        if(operation != lastOperation){
+                            logger.info("U is a PKChange");
+                        }
+
                         resultMap.put(newPK, resultMap.get(pk));
                         resultMap.remove(pk);
                         pk = newPK;
@@ -82,6 +96,10 @@ public class FileParser2 {
                     skipNBytes(mappedByteBuffer, SUFFIX);
                     seekForEN(mappedByteBuffer);
                 }
+
+                lastOperation = operation;
+
+
             }
 
         } catch (IOException e) {
