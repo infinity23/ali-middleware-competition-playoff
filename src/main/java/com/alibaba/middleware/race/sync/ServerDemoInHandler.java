@@ -136,7 +136,7 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 //        result.readBytes(result1);
 //        String resultStr = new String(result1);
 //        // 接收并打印客户端的信息
-//        System.out.println("com.alibaba.middleware.race.sync.Client said:" + resultStr);
+//        System.out.println("netty.Client said:" + resultStr);
 //
 //        while (true) {
 //            // 向客户端发送消息

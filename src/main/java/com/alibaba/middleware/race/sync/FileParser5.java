@@ -235,7 +235,7 @@ public class FileParser5 {
 //            LinkedHashMap<Integer, Integer> PKchangeMap = result.getPKChangeMap();
 
 
-            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
+//            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
             HashIntObjMap<byte[]> updateMap = result.getUpdateMap();
             ArrayList<Integer> updateList = result.getUpdateList();
             ArrayList<Integer> oldPKList = result.getOldPKList();

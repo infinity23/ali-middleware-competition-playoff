@@ -37,8 +37,6 @@ public class FileParser7 {
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
 //    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
         private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
-    private boolean mergeResultStart;
-    private boolean readFinish;
 
     public FileParser7() {
         System.getProperties().put("file.encoding", "UTF-8");
@@ -65,7 +63,6 @@ public class FileParser7 {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(DATA_HOME + i + ".txt", "r");
                 FileChannel fileChannel = randomAccessFile.getChannel();
 
-                boolean readOne = false;
                 int mp = 0;
                 MappedByteBuffer mappedByteBuffer;
                 int block = DIRECT_CACHE / THREAD_NUM;
@@ -102,8 +99,6 @@ public class FileParser7 {
                             e.printStackTrace();
                         }
                     }
-
-
 
                 }
 
@@ -160,7 +155,7 @@ public class FileParser7 {
             for (Result result : results){
 
 
-            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
+//            HashIntObjMap<byte[]> insertMap = result.getInsertMap();
             HashIntObjMap<byte[]> updateMap = result.getUpdateMap();
             ArrayList<Integer> updateList = result.getUpdateList();
             ArrayList<Integer> oldPKList = result.getOldPKList();

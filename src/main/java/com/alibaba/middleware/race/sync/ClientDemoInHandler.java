@@ -8,8 +8,7 @@ import java.io.FileNotFoundException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
-import static com.alibaba.middleware.race.sync.Constants.RESULT_FILE_NAME;
-import static com.alibaba.middleware.race.sync.Constants.RESULT_HOME;
+import static com.alibaba.middleware.race.sync.Constants.*;
 
 public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
@@ -28,7 +27,14 @@ public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         ByteBuf buf = (ByteBuf) msg;
-////
+        fileChannel.write(buf.nioBuffer());
+        buf.release();
+
+
+        if (fileChannel.size() == RESULT_SIZE) {
+            fileChannel.close();
+            ctx.close();
+        }
 //        if(first) {
 //            ByteBuf byteBuf = ctx.alloc().buffer(4);
 //            buf.getBytes(0,byteBuf);
@@ -43,12 +49,10 @@ public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 //        Logger logger = LoggerFactory.getLogger(ClientDemoInHandler.class);
 //        logger.info("write to " + RESULT_HOME + RESULT_FILE_NAME);
 
-        fileChannel.write(buf.nioBuffer());
 
         //测试输出信息
 //        System.out.print(buf.readCharSequence(buf.readableBytes(), Constants.CHARSET));
 
-        buf.release();
 
 //        if(fileChannel.size() == len) {
 //            fileChannel.close();

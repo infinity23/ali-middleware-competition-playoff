@@ -81,6 +81,9 @@ interface Cons {
     //跳过前缀(55 - 62)
     int PREFIX = 54;
 
+    int RESULT_BUF = 40 * 1024 * 1024;
+
+
 
     //    属性约定表,用索引指代属性(赛题)
     HashMap<Integer, Byte> KEYMAP = new HashMap<Integer, Byte>(4) {

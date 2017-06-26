@@ -3,8 +3,6 @@ package com.alibaba.middleware.race.sync;
 import com.koloboke.collect.map.hash.HashIntObjMap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,11 +12,10 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.concurrent.*;
 
-import static com.alibaba.middleware.race.sync.Cons.VAL_LEN_ARRAY;
-import static com.alibaba.middleware.race.sync.Cons.VAL_OFFSET_ARRAY;
+import static com.alibaba.middleware.race.sync.Cons.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
 
@@ -57,9 +54,9 @@ public class FileParser8 {
     }
 
     //    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
-    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM * 4);
+    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
 //    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
-    private ExecutorService executorService = Executors.newCachedThreadPool();
+    private ExecutorService executorService = Executors.newFixedThreadPool(THREAD_NUM);
 
     public void readPages() {
         try {
@@ -346,9 +343,9 @@ public class FileParser8 {
 
     public void showResult() {
 
-        List<Integer> pkList = new ArrayList<>(128 * 1024);
+        ArrayList<Integer> pkList = new ArrayList<>(2 * 1024 * 1024);
         for (int l : resultMap.keySet()) {
-            if (l <= lo || l >= hi) {
+            if (l >= hi || l <= lo) {
                 continue;
             }
             pkList.add(l);
@@ -356,33 +353,104 @@ public class FileParser8 {
         Collections.sort(pkList);
         logger.info("pkList size: " + pkList.size());
 
-        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(40 * 1024 * 1024);
+
+        long start = System.currentTimeMillis();
+
+//        for (int j = 0; j < size; j++) {
+//            int pk = pkList.get(j);
+//            byte[] record = resultMap.get(pk);
+//            buf.writeBytes(String.valueOf(pk).getBytes());
+////            channel.write(String.valueOf(pk).getBytes());
+//            for (int i = 0; i < KEY_NUM; i++) {
+//                buf.writeByte('\t');
+////                channel.write('\t');
+//                int offset = VAL_OFFSET_ARRAY[i];
+//                int len = VAL_LEN_ARRAY[i];
+////                int len = record[offset];
+////                buf.writeBytes(record, offset + 1, len);
+//                byte b;
+//                int n = 0;
+//                while ((n++ < len) && ((b = record[offset++]) != 0)) {
+//                    buf.writeByte(b);
+////                    channel.write(b);
+//                }
+//            }
+//            buf.writeByte('\n');
+////            channel.write('\n');
+//        }
+
         int size = pkList.size();
-        for (int j = 0; j < size; j++) {
-            int pk = pkList.get(j);
-            byte[] record = resultMap.get(pk);
-            buf.writeBytes(String.valueOf(pk).getBytes());
-            for (int i = 0; i < KEY_NUM; i++) {
-                buf.writeByte('\t');
-                int offset = VAL_OFFSET_ARRAY[i];
-                int len = VAL_LEN_ARRAY[i];
-//                int len = record[offset];
-//                buf.writeBytes(record, offset + 1, len);
-                byte b;
-                int n = 0;
-                while ((n++ < len) && ((b = record[offset++]) != 0)) {
-                    buf.writeByte(b);
-                }
-            }
-            buf.writeByte('\n');
+        int par = size / THREAD_NUM;
+        LinkedList<Future<ByteBuf>> bufList = new LinkedList<>();
+
+        for (int i = 0; i < THREAD_NUM - 1; i++) {
+            bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * i, par * (i + 1))));
         }
+        bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * (THREAD_NUM - 1), size)));
+
+        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+
+        while(!bufList.isEmpty()){
+            try {
+                ByteBuf byteBuf = bufList.poll().get();
+                buf.writeBytes(byteBuf);
+
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        long end = System.currentTimeMillis();
+
+        logger.info("构建bytebuf时间 "+ (end - start));
 
         logger.info("result 大小： " + buf.readableBytes());
 
-        ChannelFuture future = Server.channel.writeAndFlush(buf);
-        future.addListener(ChannelFutureListener.CLOSE);
+        Server.channel.writeAndFlush(buf);
+//        ChannelFuture future = Server.channel.writeAndFlush(buf);
+//        future.addListener(ChannelFutureListener.CLOSE);
 
 
+    }
+
+    private class WriteResult implements Callable<ByteBuf> {
+        private ConcurrentHashMap<Integer,byte[]> resultMap;
+        private ArrayList<Integer> pkList;
+        private int start;
+        private int lim;
+
+        public WriteResult(ConcurrentHashMap<Integer, byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
+            this.resultMap = resultMap;
+            this.pkList = pkList;
+            this.start = start;
+            this.lim = lim;
+        }
+
+        @Override
+        public ByteBuf call() throws Exception {
+
+            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF/THREAD_NUM);
+
+            for (int j = start; j < lim; j++) {
+                int pk = pkList.get(j);
+                byte[] record = resultMap.get(pk);
+                buf.writeBytes(String.valueOf(pk).getBytes());
+                for (int i = 0; i < KEY_NUM; i++) {
+                    buf.writeByte('\t');
+                    int offset = VAL_OFFSET_ARRAY[i];
+                    int len = VAL_LEN_ARRAY[i];
+                    byte b;
+                    int n = 0;
+                    while ((n++ < len) && ((b = record[offset++]) != 0)) {
+                        buf.writeByte(b);
+                    }
+                }
+                buf.writeByte('\n');
+            }
+
+            return buf;
+        }
     }
 
 

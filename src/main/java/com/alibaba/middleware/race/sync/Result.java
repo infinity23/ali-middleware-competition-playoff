@@ -2,6 +2,7 @@ package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
+import com.koloboke.collect.set.hash.HashIntSet;
 
 import java.util.ArrayList;
 
@@ -11,12 +12,13 @@ public class Result {
 //    private LinkedHashMap<Integer, Integer> PKChangeMap;
 //    private LinkedList<Integer> deleteSet;
 
-    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap();
+//    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap();
     private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap();
     private ArrayList<Integer> updateList = new ArrayList<>();
     private ArrayList<Integer> oldPKList = new ArrayList<>();
     private ArrayList<Integer> newPKList = new ArrayList<>();
     private ArrayList<Integer> deleteList = new ArrayList<>();
+
 
 //    public Result(HashIntObjMap<byte[]> insertMap, LinkedHashMap<Integer, byte[]> updateMap, LinkedHashMap<Integer, Integer> PKChangeMap, LinkedList<Integer> deleteSet) {
 //        this.insertMap = insertMap;
@@ -26,20 +28,24 @@ public class Result {
 //    }
 
 
-    public Result(HashIntObjMap<byte[]> insertMap, HashIntObjMap<byte[]> updateMap, ArrayList<Integer> updateList, ArrayList<Integer> oldPKList, ArrayList<Integer> newPKList, ArrayList<Integer> deleteList) {
-        this.insertMap = insertMap;
-        this.updateMap = updateMap;
-        this.updateList = updateList;
-        this.oldPKList = oldPKList;
-        this.newPKList = newPKList;
-        this.deleteList = deleteList;
-    }
+//    public Result(HashIntObjMap<byte[]> insertMap, HashIntObjMap<byte[]> updateMap, ArrayList<Integer> updateList, ArrayList<Integer> oldPKList, ArrayList<Integer> newPKList, ArrayList<Integer> deleteList) {
+//        this.insertMap = insertMap;
+//        this.updateMap = updateMap;
+//        this.updateList = updateList;
+//        this.oldPKList = oldPKList;
+//        this.newPKList = newPKList;
+//        this.deleteList = deleteList;
+//    }
     public Result(HashIntObjMap<byte[]> updateMap, ArrayList<Integer> updateList, ArrayList<Integer> oldPKList, ArrayList<Integer> newPKList, ArrayList<Integer> deleteList) {
         this.updateMap = updateMap;
         this.updateList = updateList;
         this.oldPKList = oldPKList;
         this.newPKList = newPKList;
         this.deleteList = deleteList;
+    }
+
+    public Result(HashIntObjMap<byte[]> updateMap, ArrayList<Integer> updateList, ArrayList<Integer> oldPKList, ArrayList<Integer> newPKList, HashIntSet deleteSet) {
+
     }
 
 //    public HashIntObjMap<byte[]> getInsertMap() {
@@ -59,9 +65,9 @@ public class Result {
 //    }
 
 
-    public HashIntObjMap<byte[]> getInsertMap() {
-        return insertMap;
-    }
+//    public HashIntObjMap<byte[]> getInsertMap() {
+//        return insertMap;
+//    }
 
     public HashIntObjMap<byte[]> getUpdateMap() {
         return updateMap;

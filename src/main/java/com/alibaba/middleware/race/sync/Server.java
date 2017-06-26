@@ -14,9 +14,8 @@ public class Server {
     private static String table;
     private static int start;
     private static int end;
-    static Channel channel;
+    public static Channel channel;
 
-    Logger logger = LoggerFactory.getLogger(Server.class);
 
 
     // 保存channel
@@ -36,16 +35,28 @@ public class Server {
 
     public static void main(String[] args) throws InterruptedException {
         initProperties();
-//        printInput(args);
 
-//        schema = args[0];
-//        table = args[1];
-//        start = Integer.parseInt(args[2]);
-//        end = Integer.parseInt(args[3]);
+        new Thread(new Runnable() {
+            private Logger logger = LoggerFactory.getLogger(Server.class);
+            @Override
+            public void run() {
+                long parseStart = System.currentTimeMillis();
+                logger.info("start fileParser...");
+                try {
+                    parseFile();
+                } catch (Exception e) {
+                    logger.error("parseFile error", e);
+                }
+
+                long parseEnd = System.currentTimeMillis();
+                logger.info("parseFile time: " + (parseEnd - parseStart));
+            }
+        }).start();
+
 
 
         Server server = new Server();
-//        logger.info("com.alibaba.middleware.race.sync.Server is running....");
+//        logger.info("netty.Server is running....");
         server.startServer(5527);
 
 
@@ -110,15 +121,7 @@ public class Server {
 
             ChannelFuture f = b.bind(port).sync();
 
-            long parseStart = System.currentTimeMillis();
-            try {
-                parseFile();
-            } catch (Exception e) {
-                logger.error("parseFile error", e);
-            }
 
-            long parseEnd = System.currentTimeMillis();
-            logger.info("parseFile time: " + (parseEnd - parseStart));
 
 //            writeFile();
             f.channel().closeFuture().sync();
@@ -129,9 +132,8 @@ public class Server {
         }
     }
 
-    private void parseFile() {
+    private static void parseFile() {
 
-//        logger.info("start fileParser...");
 //        FileParser2 fileParser = new FileParser2();
 //
 //        for (int i = 1; i <= 10; i++) {

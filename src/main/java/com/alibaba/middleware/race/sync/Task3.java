@@ -44,6 +44,9 @@ public class Task3 implements Callable<Result> {
     private int sum;
 
 
+//    private Logger logger = LoggerFactory.getLogger(Server.class);
+
+
 //    private static byte threadNum;
 
     //
@@ -77,14 +80,12 @@ public class Task3 implements Callable<Result> {
         return new Result(updateMap, updateList, oldPKList, newPKList, deleteList);
     }
 
-
     public void read() {
         byte operation;
         int pk;
         byte[] record;
 
         while (mappedByteBuffer.position() < limit) {
-
             operation = parseOperation(mappedByteBuffer);
 
             if (operation == CHAR_I) {
