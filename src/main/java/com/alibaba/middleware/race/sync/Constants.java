@@ -68,7 +68,7 @@ interface Constants {
     int KEY_NUM = 5;
     int BLOCK_SIZE = 100 * 1024 * 1024;
     int CACHE_SIZE = 300 * 1024 * 1024;
-    int THREAD_NUM = 30;
+    int THREAD_NUM = 16;
 
     //后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
     int SUFFIX = 104;

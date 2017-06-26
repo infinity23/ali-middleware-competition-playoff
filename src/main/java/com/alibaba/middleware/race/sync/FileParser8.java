@@ -335,7 +335,7 @@ public class FileParser8 {
         logger.info("sort time: " + (end -start));
 
 
-        ByteBuf buf = ByteBufAllocator.DEFAULT.directBuffer(40 * 1024 * 1024);
+        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(40 * 1024 * 1024);
         int size = pkList.size();
         for (int j = 0; j < size; j++) {
             int pk = pkList.get(j);
