@@ -5,6 +5,7 @@ import com.koloboke.collect.map.hash.HashIntObjMaps;
 
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -32,7 +33,9 @@ public class Task3 implements Callable<Result> {
     //    private LinkedList<Integer> deleteList = new LinkedList<>();
     private ArrayList<Integer> deleteList = new ArrayList<>(128 * 1024);
 
-    private ConcurrentHashMap<Integer, byte[]> resultMap;
+//    private ConcurrentHashMap<Integer, byte[]> resultMap;
+//    private HashMap<Integer, byte[]> resultMap;
+    private HashIntObjMap<byte[]> resultMap;
 
     private MappedByteBuffer mappedByteBuffer;
 
@@ -62,12 +65,30 @@ public class Task3 implements Callable<Result> {
 //        this.len = len;
 //    }
 
-    public Task3(ConcurrentHashMap<Integer, byte[]> resultMap, MappedByteBuffer mappedByteBuffer, int limit) {
+    public Task3(ConcurrentHashMap<Integer, byte[]> resultConcurrentMap, MappedByteBuffer mappedByteBuffer, int limit) {
         num = (byte) (threadNum % THREAD_NUM + 1);
         carry = (byte) (threadNum / THREAD_NUM);
         sum = num + carry * 16;
         threadNum++;
-        this.resultMap = resultMap;
+//        this.resultMap = resultConcurrentMap;
+        this.mappedByteBuffer = mappedByteBuffer;
+        this.limit = limit;
+    }
+    public Task3(HashMap<Integer, byte[]> resultHashMap, MappedByteBuffer mappedByteBuffer, int limit) {
+        num = (byte) (threadNum % THREAD_NUM + 1);
+        carry = (byte) (threadNum / THREAD_NUM);
+        sum = num + carry * 16;
+        threadNum++;
+//        this.resultMap = resultHashMap;
+        this.mappedByteBuffer = mappedByteBuffer;
+        this.limit = limit;
+    }
+    public Task3(HashIntObjMap<byte[]> resultKolobokeMap, MappedByteBuffer mappedByteBuffer, int limit) {
+        num = (byte) (threadNum % THREAD_NUM + 1);
+        carry = (byte) (threadNum / THREAD_NUM);
+        sum = num + carry * 16;
+        threadNum++;
+        this.resultMap = resultKolobokeMap;
         this.mappedByteBuffer = mappedByteBuffer;
         this.limit = limit;
     }
@@ -138,9 +159,15 @@ public class Task3 implements Callable<Result> {
             } else {
                 pk = parsePK(mappedByteBuffer);
 
+//                if(resultMap.containsKey(pk)) {
+//                    synchronized (Task3.class) {
+//                        resultMap.remove(pk);
+//                    }
+//                }else {
+//                    deleteList.add(pk);
+//                }
 
                 deleteList.add(pk);
-
                 //跳过剩余
                 skipNBytes(mappedByteBuffer, SUFFIX);
                 seekForEN(mappedByteBuffer);

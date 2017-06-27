@@ -1,6 +1,7 @@
 package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
+import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import org.slf4j.Logger;
@@ -32,12 +33,16 @@ public class FileParser8 {
     //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
 //    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
-        private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
+//    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
+//    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
+//    private HashMap<Integer, byte[]> resultMap = new HashMap<>(8 * 1024 * 1024);
+    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(8 * 1024 * 1024);
     private boolean mergeResultStart;
     private boolean readFinish;
-    private int updateTotal;
-    private int pkchangeTotal;
-    private int deleteTotal;
+//    private int updateTotal;
+//    private int pkchangeTotal;
+//    private int deleteTotal;
+
 
     public FileParser8() {
         System.getProperties().put("file.encoding", "UTF-8");
@@ -55,8 +60,9 @@ public class FileParser8 {
 
     //    private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
     private BlockingQueue<Future<Result>> futureList = new LinkedBlockingQueue<>(THREAD_NUM);
-//    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
-    private ExecutorService executorService = Executors.newFixedThreadPool(THREAD_NUM);
+    //    private BlockingQueue<Result[]> resultsList = new LinkedBlockingQueue<>();
+//    private ExecutorService executorService = Executors.newFixedThreadPool(THREAD_NUM);
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void readPages() {
         try {
@@ -68,10 +74,6 @@ public class FileParser8 {
                 MappedByteBuffer mappedByteBuffer;
                 int block = DIRECT_CACHE / THREAD_NUM;
                 long size = fileChannel.size();
-                //PKChange针对优化
-                if(i == 10){
-                    size = PK_CHANGE_START;
-                }
                 while (mp < size) {
                     long rest = fileChannel.size() - mp;
                     int limit;
@@ -90,14 +92,6 @@ public class FileParser8 {
                         limit = (int) rest;
                         mp = (int) size;
                         futureList.put(executorService.submit(new Task3(resultMap, mappedByteBuffer, limit)));
-
-                        //PKChange针对优化
-                        if(i == 10){
-                            mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, PK_CHANGE_START, size - PK_CHANGE_START);
-                            limit = (int) (size - PK_CHANGE_START);
-                            mp = (int) size;
-                            futureList.put(executorService.submit(new Task3(resultMap, mappedByteBuffer, limit)));
-                        }
                     }
 
 //                    //等待任务完成
@@ -180,7 +174,7 @@ public class FileParser8 {
 
                 }
 
-            logger.info("fileParser has read " + i);
+                logger.info("fileParser has read " + i);
 
             }
 
@@ -252,10 +246,9 @@ public class FileParser8 {
             ArrayList<Integer> newPKList = result.getNewPKList();
             ArrayList<Integer> deleteList = result.getDeleteList();
 
-            updateTotal += updateList.size();
-            pkchangeTotal += oldPKList.size();
-            deleteTotal += deleteList.size();
-
+//            updateTotal += updateList.size();
+//            pkchangeTotal += oldPKList.size();
+//            deleteTotal += deleteList.size();
 
 
             //先处理PK变更
@@ -301,7 +294,7 @@ public class FileParser8 {
             for (int i = 0; i < n; i++) {
                 int pk = updateList.get(i);
                 byte[] record = resultMap.get(pk);
-                if (record == null){
+                if (record == null) {
                     continue;
                 }
                 byte[] update = updateMap.get(pk);
@@ -331,14 +324,13 @@ public class FileParser8 {
 
         }
 
-        logger.info("updateTotal: " + updateTotal);
-        logger.info("pkchangeTotal: " + pkchangeTotal);
-        logger.info("deleteTotal: " + deleteTotal);
+//        logger.info("updateTotal: " + updateTotal);
+//        logger.info("pkchangeTotal: " + pkchangeTotal);
+//        logger.info("deleteTotal: " + deleteTotal);
 
-       showResult();
+        showResult();
 
     }
-
 
 
     public void showResult() {
@@ -354,8 +346,10 @@ public class FileParser8 {
         logger.info("pkList size: " + pkList.size());
 
 
-        long start = System.currentTimeMillis();
 
+//        //单线程版
+//        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+//        int size = pkList.size();
 //        for (int j = 0; j < size; j++) {
 //            int pk = pkList.get(j);
 //            byte[] record = resultMap.get(pk);
@@ -379,6 +373,8 @@ public class FileParser8 {
 ////            channel.write('\n');
 //        }
 
+
+        //多线程版
         int size = pkList.size();
         int par = size / THREAD_NUM;
         LinkedList<Future<ByteBuf>> bufList = new LinkedList<>();
@@ -390,7 +386,7 @@ public class FileParser8 {
 
         ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
 
-        while(!bufList.isEmpty()){
+        while (!bufList.isEmpty()) {
             try {
                 ByteBuf byteBuf = bufList.poll().get();
                 buf.writeBytes(byteBuf);
@@ -401,26 +397,28 @@ public class FileParser8 {
         }
 
 
-        long end = System.currentTimeMillis();
-
-        logger.info("构建bytebuf时间 "+ (end - start));
 
         logger.info("result 大小： " + buf.readableBytes());
 
-        Server.channel.writeAndFlush(buf);
 //        ChannelFuture future = Server.channel.writeAndFlush(buf);
 //        future.addListener(ChannelFutureListener.CLOSE);
-
-
+        Server.channel.writeAndFlush(buf);
     }
 
     private class WriteResult implements Callable<ByteBuf> {
-        private ConcurrentHashMap<Integer,byte[]> resultMap;
+//        private ConcurrentHashMap<Integer, byte[]> resultMap;
         private ArrayList<Integer> pkList;
         private int start;
         private int lim;
+        private HashIntObjMap<byte[]> resultMap;
 
-        public WriteResult(ConcurrentHashMap<Integer, byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
+//        public WriteResult(ConcurrentHashMap<Integer, byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
+//            this.resultMap = resultMap;
+//            this.pkList = pkList;
+//            this.start = start;
+//            this.lim = lim;
+//        }
+        public WriteResult(HashIntObjMap<byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
             this.resultMap = resultMap;
             this.pkList = pkList;
             this.start = start;
@@ -430,7 +428,7 @@ public class FileParser8 {
         @Override
         public ByteBuf call() throws Exception {
 
-            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF/THREAD_NUM);
+            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF / THREAD_NUM);
 
             for (int j = start; j < lim; j++) {
                 int pk = pkList.get(j);
