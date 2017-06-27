@@ -386,23 +386,29 @@ public class FileParser8 {
 
 //        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
 
+
+
+        int resultSize = 0;
         while (!bufList.isEmpty()) {
             try {
                 ByteBuf byteBuf = bufList.poll().get();
 //                buf.writeBytes(byteBuf);
 
                 Server.channel.write(byteBuf);
-
+                resultSize += byteBuf.readableBytes();
 
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         }
 
-
         Server.channel.flush();
 
+
+
+
 //        logger.info("result 大小： " + buf.readableBytes());
+        logger.info("result 大小： " + resultSize);
 
 //        ChannelFuture future = Server.channel.writeAndFlush(buf);
 //        future.addListener(ChannelFutureListener.CLOSE);
