@@ -1,7 +1,10 @@
 package com.alibaba.middleware.race.sync;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -24,6 +27,7 @@ public class Client {
         Client client = new Client();
         client.connect(ip, port);
         logger.info("关闭连接");
+
         System.exit(0);
     }
 
@@ -52,9 +56,9 @@ public class Client {
             b.channel(NioSocketChannel.class);
             b.option(ChannelOption.TCP_NODELAY, true)
                     .option(ChannelOption.SO_KEEPALIVE, false)
-                    .option(ChannelOption.SO_SNDBUF, 256 * 1024)
-                    .option(ChannelOption.SO_RCVBUF, 256 * 1024)
-                                .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
+                    .option(ChannelOption.SO_SNDBUF, 64 * 1024)
+                    .option(ChannelOption.SO_RCVBUF, 64 * 1024);
+//                                .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
 //                                .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(40 * 1024 * 1024));
 
             b.handler(new ChannelInitializer<SocketChannel>() {

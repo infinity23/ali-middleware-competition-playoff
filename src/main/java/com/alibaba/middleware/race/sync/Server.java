@@ -113,7 +113,7 @@ public class Server {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             // 注册handler
-                            ch.pipeline().addLast(new ServerDemoInHandler(schema, table, start, end));
+                            ch.pipeline().addLast(new ServerDemoInHandler());
                             // ch.pipeline().addLast(new ServerDemoOutHandler());
                         }
                     });

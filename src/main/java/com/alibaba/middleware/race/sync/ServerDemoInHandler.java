@@ -6,11 +6,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileNotFoundException;
-import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
-
-import static com.alibaba.middleware.race.sync.Constants.MIDDLE_HOME;
 
 /**
  * 处理client端的请求 Created by wanshao on 2017/5/25.
@@ -23,25 +19,6 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
     private int end;
     private Channel channel;
     private FileChannel fileChannel;
-
-    public ServerDemoInHandler(String schema, String table, int start, int end) {
-        this.schema = schema;
-        this.table = table;
-        this.start = start;
-        this.end = end;
-
-        try {
-            RandomAccessFile randomAccessFile = new RandomAccessFile(MIDDLE_HOME + "insert", "rw");
-            fileChannel = randomAccessFile.getChannel();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-
-
-
 
 
     /**
