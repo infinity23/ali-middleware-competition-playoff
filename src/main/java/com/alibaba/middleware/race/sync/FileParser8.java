@@ -384,12 +384,15 @@ public class FileParser8 {
         }
         bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * (THREAD_NUM - 1), size)));
 
-        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+//        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
 
         while (!bufList.isEmpty()) {
             try {
                 ByteBuf byteBuf = bufList.poll().get();
-                buf.writeBytes(byteBuf);
+//                buf.writeBytes(byteBuf);
+
+                Server.channel.write(byteBuf);
+
 
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
@@ -397,12 +400,13 @@ public class FileParser8 {
         }
 
 
+        Server.channel.flush();
 
-        logger.info("result 大小： " + buf.readableBytes());
+//        logger.info("result 大小： " + buf.readableBytes());
 
 //        ChannelFuture future = Server.channel.writeAndFlush(buf);
 //        future.addListener(ChannelFutureListener.CLOSE);
-        Server.channel.writeAndFlush(buf);
+//        Server.channel.writeAndFlush(buf);
     }
 
     private class WriteResult implements Callable<ByteBuf> {

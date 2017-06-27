@@ -33,7 +33,9 @@ public class ClientDemoInHandler extends ChannelInboundHandlerAdapter {
 
         if (fileChannel.size() == RESULT_SIZE) {
             fileChannel.close();
-            ctx.close();
+
+            System.exit(0);
+//            ctx.close();
         }
 //        if(first) {
 //            ByteBuf byteBuf = ctx.alloc().buffer(4);
