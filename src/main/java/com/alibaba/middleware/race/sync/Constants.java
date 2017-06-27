@@ -78,7 +78,7 @@ public interface Constants {
     int SUFFIX = 104;
     int THREAD_NUM = 16;
     int PK_CHANGE_START = 1096004908;
-    int RESULT_SIZE = 9082741;
+    int RESULT_SIZE = 38334025;
 
 
     // server端口
