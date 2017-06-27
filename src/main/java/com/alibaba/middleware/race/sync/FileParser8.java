@@ -4,8 +4,6 @@ import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +13,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.concurrent.*;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
@@ -348,65 +347,68 @@ public class FileParser8 {
 
 
 
-        //单线程版
-        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+//        //单线程版
+//        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+//        int size = pkList.size();
+//        for (int j = 0; j < size; j++) {
+//            int pk = pkList.get(j);
+//            byte[] record = resultMap.get(pk);
+//            buf.writeBytes(String.valueOf(pk).getBytes());
+////            channel.write(String.valueOf(pk).getBytes());
+//            for (int i = 0; i < KEY_NUM; i++) {
+//                buf.writeByte('\t');
+////                channel.write('\t');
+//                int offset = VAL_OFFSET_ARRAY[i];
+//                int len = VAL_LEN_ARRAY[i];
+////                int len = record[offset];
+////                buf.writeBytes(record, offset + 1, len);
+//                byte b;
+//                int n = 0;
+//                while ((n++ < len) && ((b = record[offset++]) != 0)) {
+//                    buf.writeByte(b);
+////                    channel.write(b);
+//                }
+//            }
+//            buf.writeByte('\n');
+////            channel.write('\n');
+//        }
+
+
+        //多线程版
         int size = pkList.size();
-        for (int j = 0; j < size; j++) {
-            int pk = pkList.get(j);
-            byte[] record = resultMap.get(pk);
-            buf.writeBytes(String.valueOf(pk).getBytes());
-//            channel.write(String.valueOf(pk).getBytes());
-            for (int i = 0; i < KEY_NUM; i++) {
-                buf.writeByte('\t');
-//                channel.write('\t');
-                int offset = VAL_OFFSET_ARRAY[i];
-                int len = VAL_LEN_ARRAY[i];
-//                int len = record[offset];
-//                buf.writeBytes(record, offset + 1, len);
-                byte b;
-                int n = 0;
-                while ((n++ < len) && ((b = record[offset++]) != 0)) {
-                    buf.writeByte(b);
-//                    channel.write(b);
-                }
+        int par = size / THREAD_NUM;
+        LinkedList<Future<ByteBuf>> bufList = new LinkedList<>();
+
+        for (int i = 0; i < THREAD_NUM - 1; i++) {
+            bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * i, par * (i + 1))));
+        }
+        bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * (THREAD_NUM - 1), size)));
+
+//        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+
+        int resultSize = 0;
+        while (!bufList.isEmpty()) {
+            try {
+                ByteBuf byteBuf = bufList.poll().get();
+//                buf.writeBytes(byteBuf);
+
+                Server.channel.write(byteBuf);
+                resultSize += byteBuf.readableBytes();
+
+
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
             }
-            buf.writeByte('\n');
-//            channel.write('\n');
         }
 
 
-//        //多线程版
-//        int size = pkList.size();
-//        int par = size / THREAD_NUM;
-//        LinkedList<Future<ByteBuf>> bufList = new LinkedList<>();
-//
-//        for (int i = 0; i < THREAD_NUM - 1; i++) {
-//            bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * i, par * (i + 1))));
-//        }
-//        bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * (THREAD_NUM - 1), size)));
-//
-////        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
-//
-//        while (!bufList.isEmpty()) {
-//            try {
-//                ByteBuf byteBuf = bufList.poll().get();
-////                buf.writeBytes(byteBuf);
-//
-//                Server.channel.write(byteBuf);
-//
-//
-//            } catch (InterruptedException | ExecutionException e) {
-//                e.printStackTrace();
-//            }
-//        }
+        Server.channel.flush();
 
+//        logger.info("result 大小： " + buf.readableBytes());
+        logger.info("result 大小： " + resultSize);
 
-//        Server.channel.flush();
-
-        logger.info("result 大小： " + buf.readableBytes());
-
-        ChannelFuture future = Server.channel.writeAndFlush(buf);
-        future.addListener(ChannelFutureListener.CLOSE);
+//        ChannelFuture future = Server.channel.writeAndFlush(buf);
+//        future.addListener(ChannelFutureListener.CLOSE);
 
 //        Server.channel.writeAndFlush(buf);
     }

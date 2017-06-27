@@ -28,7 +28,6 @@ public class Client {
         client.connect(ip, port);
         logger.info("关闭连接");
 
-        System.exit(0);
     }
 
     /**
@@ -56,8 +55,8 @@ public class Client {
             b.channel(NioSocketChannel.class);
             b.option(ChannelOption.TCP_NODELAY, true)
                     .option(ChannelOption.SO_KEEPALIVE, false)
-                    .option(ChannelOption.SO_SNDBUF, 64 * 1024)
-                    .option(ChannelOption.SO_RCVBUF, 64 * 1024);
+                    .option(ChannelOption.SO_SNDBUF, 256 * 1024)
+                    .option(ChannelOption.SO_RCVBUF, 256 * 1024);
 //                                .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
 //                                .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(40 * 1024 * 1024));
 
