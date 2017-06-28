@@ -32,7 +32,7 @@ public class FileParser8 {
 //    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
 //    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
 //    private HashMap<Integer, byte[]> resultMap = new HashMap<>(8 * 1024 * 1024);
-    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(8 * 1024 * 1024);
+    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5 * 1024 * 1024);
     private boolean mergeResultStart;
     private boolean readFinish;
 //    private int updateTotal;

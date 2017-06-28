@@ -28,11 +28,11 @@ public class Server {
             public void run() {
                 long parseStart = System.currentTimeMillis();
                 logger.info("start fileParser...");
-                try {
+//                try {
                     parseFile();
-                } catch (Exception e) {
-                    logger.error("parseFile error", e);
-                }
+//                } catch (Exception e) {
+//                    logger.error("parseFile error", e);
+//                }
 
                 long parseEnd = System.currentTimeMillis();
                 logger.info("parseFile time: " + (parseEnd - parseStart));
@@ -99,7 +99,6 @@ public class Server {
 //            logger.info("write start : " + System.currentTimeMillis());
 //            logger.info("result size : " + data.length);
             output.write(data);
-
 
         } catch (IOException e) {
             e.printStackTrace();

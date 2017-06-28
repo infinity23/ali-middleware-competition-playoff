@@ -34,7 +34,7 @@ public interface Constants {
 //    int PK_CHANGE_START = 93740714;
 //    int RESULT_SIZE = 722;
 
-
+//
 //    //     工作主目录
 //     String TESTER_HOME = "E:\\Major\\IncrementalSync\\";
 ////     赛题数据
@@ -54,6 +54,7 @@ public interface Constants {
 //    int PK_CHANGE_START = 1039843384;
 //    int RESULT_SIZE = 9082741;
 //    int INSERT_END = 2234130;
+//    int ARR_SIZE = 512 * 1024;
 //
 //
 //
