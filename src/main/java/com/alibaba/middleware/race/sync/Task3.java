@@ -142,7 +142,11 @@ public class Task3 implements Callable<Result> {
                 }
 
                 if (resultMap.containsKey(pk)) {
-                    parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
+                    try {
+                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
+                    }catch (NullPointerException e){
+
+                    }
                     continue;
                 }
 
@@ -159,15 +163,15 @@ public class Task3 implements Callable<Result> {
             } else {
                 pk = parsePK(mappedByteBuffer);
 
-//                if(resultMap.containsKey(pk)) {
+                if(resultMap.containsKey(pk)) {
 //                    synchronized (Task3.class) {
-//                        resultMap.remove(pk);
+                        resultMap.remove(pk);
 //                    }
-//                }else {
-//                    deleteList.add(pk);
-//                }
+                }else {
+                    deleteList.add(pk);
+                }
 
-                deleteList.add(pk);
+//                deleteList.add(pk);
                 //跳过剩余
                 skipNBytes(mappedByteBuffer, SUFFIX);
                 seekForEN(mappedByteBuffer);

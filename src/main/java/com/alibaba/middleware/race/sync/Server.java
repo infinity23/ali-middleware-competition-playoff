@@ -95,16 +95,24 @@ public class Server {
     public static void writeToClient(byte[] data) {
 
         try {
-            logger.info("write start : " + System.currentTimeMillis());
-            logger.info("result size : " + data.length);
+//            logger.info("write start : " + System.currentTimeMillis());
+//            logger.info("result size : " + data.length);
             output.write(data);
-            output.flush();
-            output.close();
+
 
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+    }
+
+    public static void finish(){
+        try {
+            output.flush();
+            output.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

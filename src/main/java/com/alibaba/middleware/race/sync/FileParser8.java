@@ -2,8 +2,6 @@ package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -376,7 +374,7 @@ public class FileParser8 {
         //多线程版
         int size = pkList.size();
         int par = size / THREAD_NUM;
-        LinkedList<Future<ByteBuf>> bufList = new LinkedList<>();
+        LinkedList<Future<byte[]>> bufList = new LinkedList<>();
 
         for (int i = 0; i < THREAD_NUM - 1; i++) {
             bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * i, par * (i + 1))));
@@ -384,27 +382,33 @@ public class FileParser8 {
         bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * (THREAD_NUM - 1), size)));
 
 
-        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+//        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
 
+        int resultSize = 0;
         while (!bufList.isEmpty()) {
             try {
-                ByteBuf byteBuf = bufList.poll().get();
-                buf.writeBytes(byteBuf);
+                byte[] data = bufList.poll().get();
+                Server.writeToClient(data);
+                resultSize += data.length;
+//                buf.writeBytes(byteBuf);
 
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         }
 
-        byte[] data = new byte[buf.readableBytes()];
-        buf.readBytes(data);
+        Server.finish();
 
-        Server.writeToClient(data);
+
+//        byte[] data = new byte[buf.readableBytes()];
+//        buf.readBytes(data);
+//
+//        Server.writeToClient(data);
 
 //        Server.channel.flush();
 
 //        logger.info("result 大小： " + buf.readableBytes());
-//        logger.info("result 大小： " + resultSize);
+        logger.info("result 大小： " + resultSize);
 
 //        ChannelFuture future = Server.channel.writeAndFlush(buf);
 //        future.addListener(ChannelFutureListener.CLOSE);
@@ -412,7 +416,7 @@ public class FileParser8 {
 //        Server.channel.writeAndFlush(buf);
     }
 
-    private class WriteResult implements Callable<ByteBuf> {
+    private class WriteResult implements Callable<byte[]> {
 //        private ConcurrentHashMap<Integer, byte[]> resultMap;
         private ArrayList<Integer> pkList;
         private int start;
@@ -433,30 +437,45 @@ public class FileParser8 {
         }
 
         @Override
-        public ByteBuf call() throws Exception {
+        public byte[] call() throws Exception {
 
-            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF / THREAD_NUM);
+//            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF / THREAD_NUM);
+            byte[] data = new byte[RESULT_BUF / THREAD_NUM];
+            int index = 0;
 
             for (int j = start; j < lim; j++) {
                 int pk = pkList.get(j);
                 byte[] record = resultMap.get(pk);
-                buf.writeBytes(String.valueOf(pk).getBytes());
+//                buf.writeBytes(String.valueOf(pk).getBytes());
+
+                byte[] pks =  String.valueOf(pk).getBytes();
+
+                System.arraycopy(pks,0,data, index, pks.length);
+                index += pks.length;
+
                 for (int i = 0; i < KEY_NUM; i++) {
-                    buf.writeByte(CHAR_TABLE);
+//                    buf.writeByte(CHAR_TABLE);
+                    data[index++] = CHAR_TABLE;
                     int offset = VAL_OFFSET_ARRAY[i];
                     int len = VAL_LEN_ARRAY[i];
                     byte b;
                     int n = 0;
                     while ((n++ < len) && ((b = record[offset++]) != 0)) {
-                        buf.writeByte(b);
+//                        buf.writeByte(b);
+                        data[index++] = b;
                     }
                 }
-                buf.writeByte(CHAR_ENTER);
+//                buf.writeByte(CHAR_ENTER);
+                data[index++] = CHAR_ENTER;
             }
 
-            return buf;
+            byte[] temp = new byte[index];
+            System.arraycopy(data,0,temp,0,index);
+
+            return temp;
         }
     }
+
 
 
 }

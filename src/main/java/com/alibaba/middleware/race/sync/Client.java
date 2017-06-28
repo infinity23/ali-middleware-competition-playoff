@@ -1,8 +1,8 @@
 package com.alibaba.middleware.race.sync;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
@@ -30,15 +30,15 @@ public class Client {
             //读取服务器端数据
             InputStream input = socket.getInputStream();
 
-            RandomAccessFile randomAccessFile = new RandomAccessFile(RESULT_HOME + RESULT_FILE_NAME, "rw");
+//            RandomAccessFile randomAccessFile = new RandomAccessFile(RESULT_HOME + RESULT_FILE_NAME, "rw");
 
-//            FileOutputStream fileOutputStream = new FileOutputStream("E:\\Major\\IncrementalSync\\example\\result\\1.txt");
-////                fileOutputStream.write(data);
+            FileOutputStream fileOutputStream = new FileOutputStream(RESULT_HOME + RESULT_FILE_NAME);
+//                fileOutputStream.write(data);
 //
             byte[] buf = new byte[128 * 1024];
             int len;
             while ((len = input.read(buf)) > 0) {
-                randomAccessFile.write(buf, 0, len);
+                fileOutputStream.write(buf, 0, len);
 //                    System.out.println(len);
             }
 
@@ -53,11 +53,12 @@ public class Client {
 //                }
 
             input.close();
-            randomAccessFile.close();
-//                fileOutputStream.close();
+//            randomAccessFile.close();
+            fileOutputStream.flush();
+            fileOutputStream.close();
             long end = System.currentTimeMillis();
             System.out.println(end);
-            System.exit(0);
+//            System.exit(0);
 
 
         } catch (Exception e) {
