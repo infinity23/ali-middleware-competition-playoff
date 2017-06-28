@@ -12,7 +12,7 @@ public interface Constants {
     //':'
     byte CO = 58;
 
-    int DIRECT_CACHE = 200 * 1024 * 1024;
+    int DIRECT_CACHE = 400 * 1024 * 1024;
 
     // ------------ 本地测试可以使用自己的路径--------------//
 
