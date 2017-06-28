@@ -80,7 +80,7 @@ public interface Constants {
     int THREAD_NUM = 32;
     int PK_CHANGE_START = 1096004908;
     int RESULT_SIZE = 38334025;
-    int ARR_SIZE = 128 * 1024;
+    int ARR_SIZE = 256 * 1024;
 
 
     // server端口

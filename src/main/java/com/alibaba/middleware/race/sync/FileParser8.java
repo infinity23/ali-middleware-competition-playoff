@@ -2,8 +2,6 @@ package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -19,11 +17,11 @@ import static com.alibaba.middleware.race.sync.Constants.*;
 //parse7并发版
 public class FileParser8 {
     //    private static final int BLOCK_SIZE = 200 * 1024 * 1024;
-    private String schema = SCHEMA;
-    private String table = TABLE;
+//    private String schema = SCHEMA;
+//    private String table = TABLE;
     private int lo = LO;
     private int hi = HI;
-    private Logger logger = LoggerFactory.getLogger(Server.class);
+//    private Logger logger = LoggerFactory.getLogger(Server.class);
 
 
     //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
@@ -33,7 +31,7 @@ public class FileParser8 {
 //    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
 //    private HashMap<Integer, byte[]> resultMap = new HashMap<>(8 * 1024 * 1024);
     private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5 * 1024 * 1024);
-    private boolean mergeResultStart;
+//    private boolean mergeResultStart;
     private boolean readFinish;
 //    private int updateTotal;
 //    private int pkchangeTotal;
@@ -170,7 +168,7 @@ public class FileParser8 {
 
                 }
 
-                logger.info("fileParser has read " + i);
+//                logger.info("fileParser has read " + i);
 
             }
 
@@ -439,7 +437,7 @@ public class FileParser8 {
 //        Server.channel.flush();
 
 //        logger.info("result 大小： " + buf.readableBytes());
-        logger.info("result 大小： " + resultSize);
+//        logger.info("result 大小： " + resultSize);
 
 //        ChannelFuture future = Server.channel.writeAndFlush(buf);
 //        future.addListener(ChannelFutureListener.CLOSE);

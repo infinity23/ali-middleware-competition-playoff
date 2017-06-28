@@ -1,8 +1,5 @@
 package com.alibaba.middleware.race.sync;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -15,32 +12,32 @@ public class Server {
     public static Socket client;
     public static BufferedOutputStream output;
 
-    private static Logger logger;
+//    private static Logger logger;
 
     public static void main(String[] args) {
 
-        initProperties();
+//        initProperties();
 
         new Thread(new Runnable() {
-            private Logger logger = LoggerFactory.getLogger(Server.class);
+//            private Logger logger = LoggerFactory.getLogger(Server.class);
 
             @Override
             public void run() {
-                long parseStart = System.currentTimeMillis();
-                logger.info("start fileParser...");
-                try {
+//                long parseStart = System.currentTimeMillis();
+//                logger.info("start fileParser...");
+//                try {
                     parseFile();
-                } catch (Exception e) {
-                    logger.error("parseFile error", e);
-                }
+//                } catch (Exception e) {
+//                    logger.error("parseFile error", e);
+//                }
 
-                long parseEnd = System.currentTimeMillis();
-                logger.info("parseFile time: " + (parseEnd - parseStart));
+//                long parseEnd = System.currentTimeMillis();
+//                logger.info("parseFile time: " + (parseEnd - parseStart));
             }
         }).start();
 
 
-        System.out.println("服务器启动...\n");
+//        System.out.println("服务器启动...\n");
         Server server = new Server();
         server.init();
     }
@@ -51,7 +48,7 @@ public class Server {
         System.setProperty("app.logging.level", Constants.LOG_LEVEL);
         System.setProperty("log.name", "server-custom");
 
-        logger = LoggerFactory.getLogger(Server.class);
+//        logger = LoggerFactory.getLogger(Server.class);
     }
 
 
@@ -63,7 +60,7 @@ public class Server {
                 // 一旦有堵塞, 则表示服务器与客户端获得了连接
                 client = serverSocket.accept();
                 output = new BufferedOutputStream(client.getOutputStream());
-                logger.info("client connected...");
+//                logger.info("client connected...");
                 // 处理这次连接
 //                    new HandlerThread(client);
             }
