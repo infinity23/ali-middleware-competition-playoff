@@ -77,7 +77,7 @@ public interface Constants {
 
     //    后缀 keys53 + nulls20 + |15 + 5 + values最小（3 + 3 + 3 + score(1) + score2(1)）11
     int SUFFIX = 104;
-    int THREAD_NUM = 16;
+    int THREAD_NUM = 32;
     int PK_CHANGE_START = 1096004908;
     int RESULT_SIZE = 38334025;
     int ARR_SIZE = 128 * 1024;
