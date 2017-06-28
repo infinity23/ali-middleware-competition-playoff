@@ -4,7 +4,6 @@ import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
 
 import java.nio.MappedByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,16 +23,22 @@ public class Task3 implements Callable<Result> {
 //    private int len;
 
     //    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(128 * 1024);
-    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(128 * 1024);
-    private ArrayList<Integer> updateList = new ArrayList<>(128 * 1024);
+    private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(ARR_SIZE);
+//    private ArrayList<Integer> updateList = new ArrayList<>(128 * 1024);
+    private int[] updateArr = new int[ARR_SIZE];
     //    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
 //    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
-    private ArrayList<Integer> oldPKList = new ArrayList<>(128 * 1024);
-    private ArrayList<Integer> newPKList = new ArrayList<>(128 * 1024);
-    //    private LinkedList<Integer> deleteList = new LinkedList<>();
-    private ArrayList<Integer> deleteList = new ArrayList<>(128 * 1024);
+//    private ArrayList<Integer> oldPKList = new ArrayList<>(128 * 1024);
+    private int[] oldPKArr = new int[ARR_SIZE];
+//    private ArrayList<Integer> newPKList = new ArrayList<>(128 * 1024);
+    private int[] newPKArr = new int[ARR_SIZE];
 
-//    private ConcurrentHashMap<Integer, byte[]> resultMap;
+    //    private LinkedList<Integer> deleteList = new LinkedList<>();
+//    private ArrayList<Integer> deleteList = new ArrayList<>(128 * 1024);
+    private int[] deleteArr = new int[ARR_SIZE];
+
+
+    //    private ConcurrentHashMap<Integer, byte[]> resultMap;
 //    private HashMap<Integer, byte[]> resultMap;
     private HashIntObjMap<byte[]> resultMap;
 
@@ -45,6 +50,14 @@ public class Task3 implements Callable<Result> {
     private byte num;
     private byte carry;
     private int sum;
+
+
+
+    private int updateIndex;
+    private int pkChangeIndex;
+    private int deleteIndex;
+
+
 
 
 //    private Logger logger = LoggerFactory.getLogger(Server.class);
@@ -93,12 +106,30 @@ public class Task3 implements Callable<Result> {
         this.limit = limit;
     }
 
+
+//    static long copyTime;
     @Override
     public Result call() throws Exception {
         read();
 //        return new Result(insertMap,updateMap,PKChangeMap,deleteList);
 //        return new Result(insertMap,updateMap,updateList,oldPKList, newPKList,deleteList);
-        return new Result(updateMap, updateList, oldPKList, newPKList, deleteList);
+//        return new Result(updateMap, updateList, oldPKList, newPKList, deleteList);
+
+//        long start = System.currentTimeMillis();
+        int[] updateTemp = new int[updateIndex];
+        System.arraycopy(updateArr,0,updateTemp,0,updateIndex);
+        int[] oldPKTemp = new int[pkChangeIndex];
+        System.arraycopy(oldPKArr,0,oldPKTemp,0,pkChangeIndex);
+        int[] newPKTemp = new int[pkChangeIndex];
+        System.arraycopy(newPKArr,0,newPKTemp,0,pkChangeIndex);
+        int[] deleteTemp = new int[deleteIndex];
+        System.arraycopy(deleteArr,0,deleteTemp,0,deleteIndex);
+
+//        long end = System.currentTimeMillis();
+//
+//        System.out.println("copy time: " + (end - start));
+
+        return new Result(updateMap, updateTemp, oldPKTemp, newPKTemp, deleteTemp);
     }
 
     public void read() {
@@ -129,12 +160,17 @@ public class Task3 implements Callable<Result> {
                 //处理主键变更
                 if (pk != newPK) {
 
-                    oldPKList.add(pk);
-                    newPKList.add(newPK);
+//                    oldPKList.add(pk);
+//                    newPKList.add(newPK);
+
+                    oldPKArr[pkChangeIndex] = pk;
+                    newPKArr[pkChangeIndex++] = newPK;
+
 
                     if (updateMap.containsKey(pk)) {
                         updateMap.put(newPK, updateMap.get(pk));
-                        updateList.add(newPK);
+//                        updateList.add(newPK);
+                        updateArr[updateIndex++] = newPK;
 //                            updateMap.remove(pk);
                     }
 
@@ -154,7 +190,9 @@ public class Task3 implements Callable<Result> {
                 if (!updateMap.containsKey(pk)) {
                     update = new byte[LEN];
                     updateMap.put(pk, update);
-                    updateList.add(pk);
+//                    updateList.add(pk);
+                    updateArr[updateIndex++] = newPK;
+
                 } else {
                     update = updateMap.get(pk);
                 }
@@ -168,10 +206,12 @@ public class Task3 implements Callable<Result> {
                         resultMap.remove(pk);
 //                    }
                 }else {
-                    deleteList.add(pk);
+//                    deleteList.add(pk);
+                    deleteArr[deleteIndex++] = pk;
                 }
 
 //                deleteList.add(pk);
+//                deleteArr[deleteIndex++] = pk;
                 //跳过剩余
                 skipNBytes(mappedByteBuffer, SUFFIX);
                 seekForEN(mappedByteBuffer);

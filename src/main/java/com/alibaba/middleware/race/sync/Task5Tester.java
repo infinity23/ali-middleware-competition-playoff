@@ -6,13 +6,14 @@ import com.koloboke.collect.map.hash.HashIntObjMaps;
 
 import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.alibaba.middleware.race.sync.Cons.*;
 import static com.alibaba.middleware.race.sync.Constants.*;
 
-public class Task implements Callable<Result>{
+public class Task5Tester implements Callable<Result> {
 //    private MappedByteBuffer mappedByteBuffer;
 //    HashMap<Long, HashMap<Byte, FilePointer>> updateMap = new HashMap<>();
 //    HashSet<Long> deleteSet = new HashSet<>();
@@ -23,21 +24,32 @@ public class Task implements Callable<Result>{
 //    private int start;
 //    private int len;
 
-//    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(128 * 1024);
+    //    private HashIntObjMap<byte[]> insertMap = HashIntObjMaps.newMutableMap(128 * 1024);
     private HashIntObjMap<byte[]> updateMap = HashIntObjMaps.newMutableMap(128 * 1024);
     private ArrayList<Integer> updateList = new ArrayList<>(128 * 1024);
-//    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
+    //    private LinkedHashMap<Integer, byte[]> updateMap = new LinkedHashMap<>();
 //    private LinkedHashMap<Integer, Integer> PKChangeMap = new LinkedHashMap<>();
     private ArrayList<Integer> oldPKList = new ArrayList<>(128 * 1024);
     private ArrayList<Integer> newPKList = new ArrayList<>(128 * 1024);
-//    private LinkedList<Integer> deleteList = new LinkedList<>();
+    //    private LinkedList<Integer> deleteList = new LinkedList<>();
     private ArrayList<Integer> deleteList = new ArrayList<>(128 * 1024);
 
     private ConcurrentHashMap<Integer, byte[]> resultMap;
+//    private HashMap<Integer, byte[]> resultMap;
+//    private HashIntObjMap<byte[]> resultMap;
 
     private MappedByteBuffer mappedByteBuffer;
 
     private int limit;
+
+    private static int threadNum;
+    private byte num;
+    private byte carry;
+    private int sum;
+
+
+//    private Logger logger = LoggerFactory.getLogger(Server.class);
+
 
 //    private static byte threadNum;
 
@@ -54,9 +66,30 @@ public class Task implements Callable<Result>{
 //        this.len = len;
 //    }
 
-    public Task(ConcurrentHashMap<Integer, byte[]> resultMap, MappedByteBuffer mappedByteBuffer, int limit) {
-//        threadNum %= 16;
-        this.resultMap = resultMap;
+    public Task5Tester(ConcurrentHashMap<Integer, byte[]> resultConcurrentMap, MappedByteBuffer mappedByteBuffer, int limit) {
+        num = (byte) (threadNum % THREAD_NUM + 1);
+        carry = (byte) (threadNum / THREAD_NUM);
+        sum = num + carry * 16;
+        threadNum++;
+        this.resultMap = resultConcurrentMap;
+        this.mappedByteBuffer = mappedByteBuffer;
+        this.limit = limit;
+    }
+    public Task5Tester(HashMap<Integer, byte[]> resultHashMap, MappedByteBuffer mappedByteBuffer, int limit) {
+        num = (byte) (threadNum % THREAD_NUM + 1);
+        carry = (byte) (threadNum / THREAD_NUM);
+        sum = num + carry * 16;
+        threadNum++;
+//        this.resultMap = resultHashMap;
+        this.mappedByteBuffer = mappedByteBuffer;
+        this.limit = limit;
+    }
+    public Task5Tester(HashIntObjMap<byte[]> resultKolobokeMap, MappedByteBuffer mappedByteBuffer, int limit) {
+        num = (byte) (threadNum % THREAD_NUM + 1);
+        carry = (byte) (threadNum / THREAD_NUM);
+        sum = num + carry * 16;
+        threadNum++;
+//        this.resultMap = resultKolobokeMap;
         this.mappedByteBuffer = mappedByteBuffer;
         this.limit = limit;
     }
@@ -66,94 +99,87 @@ public class Task implements Callable<Result>{
         read();
 //        return new Result(insertMap,updateMap,PKChangeMap,deleteList);
 //        return new Result(insertMap,updateMap,updateList,oldPKList, newPKList,deleteList);
-        return new Result(updateMap,updateList,oldPKList, newPKList,deleteList);
+        return new Result(updateMap, updateList, oldPKList, newPKList, deleteList);
     }
 
-
     public void read() {
+        byte operation;
+        int pk;
+        byte[] record;
 
-            while (mappedByteBuffer.position() < limit) {
+        while (mappedByteBuffer.position() < limit) {
+            operation = parseOperation(mappedByteBuffer);
 
-                char operation = parseOperation(mappedByteBuffer);
+            if (operation == CHAR_I) {
+                //null|
+                skipNBytes(mappedByteBuffer, NULL_LEN);
 
-                int pk;
-                if (operation == 'I') {
-                    //null|
-                    skipNBytes(mappedByteBuffer, 5);
+                pk = parsePK(mappedByteBuffer);
 
-                    pk = parsePK(mappedByteBuffer);
+                record = new byte[LEN];
 
-                    byte[] record = new byte[LEN];
+                parseInsertKeyValue(mappedByteBuffer, record);
 
-                    parseInsertKeyValue(mappedByteBuffer, record);
+                resultMap.put(pk, record);
 
-//                    record[0] = threadNum;
-
-//                    insertMap.put(pk, record);
-                    resultMap.put(pk, record);
-
-                } else if (operation == 'U') {
-                    pk = parsePK(mappedByteBuffer);
-                    int newPK = parsePK(mappedByteBuffer);
+            } else if (operation == CHAR_U) {
+                pk = parsePK(mappedByteBuffer);
+                int newPK = parsePK(mappedByteBuffer);
 
 
-                    //处理主键变更
-                    if (pk != newPK) {
+                //处理主键变更
+                if (pk != newPK) {
 
-//                        PKChangeMap.put(pk,newPK);
-                        oldPKList.add(pk);
-                        newPKList.add(newPK);
-                        if(updateMap.containsKey(pk)) {
-                            updateMap.put(newPK, updateMap.get(pk));
-                            updateList.add(newPK);
+                    oldPKList.add(pk);
+                    newPKList.add(newPK);
+
+                    if (updateMap.containsKey(pk)) {
+                        updateMap.put(newPK, updateMap.get(pk));
+                        updateList.add(newPK);
 //                            updateMap.remove(pk);
-                        }
-
-//                        if(insertMap.containsKey(pk)) {
-//                            insertMap.put(newPK, insertMap.get(pk));
-//                            insertMap.remove(pk);
-//                        }
-
-                        pk = newPK;
                     }
 
-//                    if(insertMap.containsKey(pk)){
-//                        parseUpdateKeyValue(mappedByteBuffer, insertMap.get(pk));
-//                        continue;
-//                    }
-//                    if(resultMap.containsKey(pk)){
-//                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
-//                        continue;
-//                    }
-
-                    byte[] update;
-                    if(!updateMap.containsKey(pk)){
-                        update = new byte[LEN];
-                        updateMap.put(pk,update);
-                        updateList.add(pk);
-                    }else{
-                        update = updateMap.get(pk);
-                    }
-                    parseUpdateKeyValue(mappedByteBuffer, update);
-
-                } else {
-                    pk = parsePK(mappedByteBuffer);
-
-//                    if(insertMap.containsKey(pk)) {
-//                        insertMap.remove(pk);
-//                        updateMap.remove(pk);
-//                    }else {
-//                        deleteList.add(pk);
-//                    }
-
-                    deleteList.add(pk);
-
-                    //跳过剩余
-                    skipNBytes(mappedByteBuffer, SUFFIX);
-                    seekForEN(mappedByteBuffer);
+                    pk = newPK;
                 }
 
+                if (resultMap.containsKey(pk)) {
+                    try {
+                        parseUpdateKeyValue(mappedByteBuffer, resultMap.get(pk));
+                    }catch (NullPointerException e){
+
+                    }
+                    continue;
+                }
+
+                byte[] update;
+                if (!updateMap.containsKey(pk)) {
+                    update = new byte[LEN];
+                    updateMap.put(pk, update);
+                    updateList.add(pk);
+                } else {
+                    update = updateMap.get(pk);
+                }
+                parseUpdateKeyValue(mappedByteBuffer, update);
+
+            } else {
+                pk = parsePK(mappedByteBuffer);
+
+                if(resultMap.containsKey(pk)) {
+//                    synchronized (Task3.class) {
+                        resultMap.remove(pk);
+//                    }
+                }else {
+                    deleteList.add(pk);
+                }
+
+//                deleteList.add(pk);
+                //跳过剩余
+                skipNBytes(mappedByteBuffer, SUFFIX);
+                seekForEN(mappedByteBuffer);
             }
+
+        }
+
     }
 
 
@@ -192,7 +218,7 @@ public class Task implements Callable<Result>{
     private void parseInsertKeyValue(MappedByteBuffer mappedByteBuffer, byte[] record) {
 
         for (int i = 0; i < KEY_NUM; i++) {
-            skipNBytes(mappedByteBuffer, KEY_LEN_ARRAY[i] + 6);
+            skipNBytes(mappedByteBuffer, KEY_LEN_INSERT_ARRAY[i]);
             fillArrayInsert(mappedByteBuffer, record, i);
         }
 
@@ -240,6 +266,21 @@ public class Task implements Callable<Result>{
         byte offset = VAL_OFFSET_ARRAY[val];
         byte len = VAL_LEN_ARRAY[val];
 
+
+        byte oldNum = record[offset - 2];
+        byte oldCarry = record[offset - 1];
+
+        int oldSum = oldNum + oldCarry * 16;
+
+        if (oldNum != 0 && oldSum > sum) {
+            seekForSP(mappedByteBuffer);
+            return;
+        }
+
+        record[offset - 2] = num;
+        record[offset - 1] = carry;
+
+
         int i = offset;
         while ((b = mappedByteBuffer.get()) != SP) {
             record[i++] = b;
@@ -274,17 +315,16 @@ public class Task implements Callable<Result>{
     }
 
     //  |mysql-bin.000022814547989|1497439282000|middleware8|student|I|id:1:1|NULL|1|first_name:2:0|NULL|邹|last_name:2:0|NULL|明益|sex:2:0|NULL|女|score:1:0|NULL|797|score2:1:0|NULL|106271|
-    private char parseOperation(MappedByteBuffer mappedByteBuffer) {
+    private byte parseOperation(MappedByteBuffer mappedByteBuffer) {
         //跳过前缀(55 - 62)
-//        seekForSP(mappedByteBuffer, 5);
-        skipNBytes(mappedByteBuffer, 54);
+        skipNBytes(mappedByteBuffer, PREFIX);
         seekForSP(mappedByteBuffer);
 
-        char op = (char) mappedByteBuffer.get();
+        byte op = mappedByteBuffer.get();
 
         //为parsePK做准备
 //        seekForSP(mappedByteBuffer, 2);
-        skipNBytes(mappedByteBuffer, PK_NAME_LEN + 2);
+        skipNBytes(mappedByteBuffer, PK_NAME_LEN_WITH_NULL);
 
         return op;
     }

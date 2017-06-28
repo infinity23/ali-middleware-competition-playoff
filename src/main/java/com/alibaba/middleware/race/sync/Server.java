@@ -88,6 +88,7 @@ public class Server {
 
 
         FileParser8 fileParser = new FileParser8();
+//        FileParser10Tester fileParser = new FileParser10Tester();
         fileParser.readPages();
     }
 

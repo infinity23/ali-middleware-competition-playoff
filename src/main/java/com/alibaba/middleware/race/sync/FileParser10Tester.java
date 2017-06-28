@@ -1,7 +1,7 @@
+package com.alibaba.middleware.race.sync;/*
 package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
-import com.koloboke.collect.map.hash.HashIntObjMaps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.concurrent.*;
 
@@ -17,7 +19,7 @@ import static com.alibaba.middleware.race.sync.Constants.*;
 
 
 //parse7并发版
-public class FileParser8 {
+public class FileParser10Tester {
     //    private static final int BLOCK_SIZE = 200 * 1024 * 1024;
     private String schema = SCHEMA;
     private String table = TABLE;
@@ -30,9 +32,9 @@ public class FileParser8 {
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
 //    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
 //    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
-//    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
+    private ConcurrentHashMap<Integer, byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
 //    private HashMap<Integer, byte[]> resultMap = new HashMap<>(8 * 1024 * 1024);
-    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(8 * 1024 * 1024);
+//    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(8 * 1024 * 1024);
     private boolean mergeResultStart;
     private boolean readFinish;
 //    private int updateTotal;
@@ -40,7 +42,7 @@ public class FileParser8 {
 //    private int deleteTotal;
 
 
-    public FileParser8() {
+    public FileParser10Tester() {
         System.getProperties().put("file.encoding", "UTF-8");
         System.getProperties().put("file.decoding", "UTF-8");
 
@@ -82,12 +84,12 @@ public class FileParser8 {
                         limit = mappedByteBuffer.position();
                         mp += limit;
                         mappedByteBuffer.reset();
-                        futureList.put(executorService.submit(new Task3(resultMap, mappedByteBuffer, limit)));
+                        futureList.put(executorService.submit(new Task5Tester(resultMap, mappedByteBuffer, limit)));
                     } else {
                         mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mp, rest);
                         limit = (int) rest;
                         mp = (int) size;
-                        futureList.put(executorService.submit(new Task3(resultMap, mappedByteBuffer, limit)));
+                        futureList.put(executorService.submit(new Task5Tester(resultMap, mappedByteBuffer, limit)));
                     }
 
 //                    //等待任务完成
@@ -237,18 +239,10 @@ public class FileParser8 {
 
 
             HashIntObjMap<byte[]> updateMap = result.getUpdateMap();
-//            ArrayList<Integer> updateList = result.getUpdateList();
-//            ArrayList<Integer> oldPKList = result.getOldPKList();
-//            ArrayList<Integer> newPKList = result.getNewPKList();
-//            ArrayList<Integer> deleteList = result.getDeleteList();
-
-
-            int[] updateArr = result.getUpdateArr();
-            int[] oldPKArr = result.getOldPKArr();
-            int[] newPKArr = result.getNewPKArr();
-            int[] deleteArr = result.getDeleteArr();
-
-
+            ArrayList<Integer> updateList = result.getUpdateList();
+            ArrayList<Integer> oldPKList = result.getOldPKList();
+            ArrayList<Integer> newPKList = result.getNewPKList();
+            ArrayList<Integer> deleteList = result.getDeleteList();
 
 //            updateTotal += updateList.size();
 //            pkchangeTotal += oldPKList.size();
@@ -264,13 +258,10 @@ public class FileParser8 {
 //                resultMap.remove(pk);
 //            }
 
-//            int n = oldPKList.size();
-            int n = oldPKArr.length;
+            int n = oldPKList.size();
             for (int i = 0; i < n; i++) {
-//                int pk = oldPKList.get(i);
-//                int newPk = newPKList.get(i);
-                int pk = oldPKArr[i];
-                int newPk = newPKArr[i];
+                int pk = oldPKList.get(i);
+                int newPk = newPKList.get(i);
                 resultMap.put(newPk, resultMap.get(pk));
                 resultMap.remove(pk);
             }
@@ -297,11 +288,9 @@ public class FileParser8 {
 //            }
 
 
-//            n = updateList.size();
-            n = updateArr.length;
+            n = updateList.size();
             for (int i = 0; i < n; i++) {
-//                int pk = updateList.get(i);
-                int pk = updateArr[i];
+                int pk = updateList.get(i);
                 byte[] record = resultMap.get(pk);
                 if (record == null) {
                     continue;
@@ -325,18 +314,11 @@ public class FileParser8 {
 //                resultMap.remove(pk);
 //            }
 
-//            n = deleteList.size();
-            n = deleteArr.length;
+            n = deleteList.size();
             for (int i = 0; i < n; i++) {
-//                int pk = deleteList.get(i);
-                int pk = deleteArr[i];
+                int pk = deleteList.get(i);
                 resultMap.remove(pk);
             }
-
-            updateArr = null;
-            oldPKArr = null;
-            newPKArr = null;
-            deleteArr = null;
 
         }
 
@@ -351,27 +333,15 @@ public class FileParser8 {
 
     public void showResult() {
 
-//        ArrayList<Integer> pkList = new ArrayList<>(64 * 1024 * 1024);
-
-//        int[] keySet = (resultMap.keySet()).toIntArray();
-//        Arrays.sort(keySet);
-
-        int[] pkList = new int[hi - lo - 1];
-        int index = 0;
-        for (int i = lo + 1; i < hi; i++) {
-            pkList[index++] = i;
+        ArrayList<Integer> pkList = new ArrayList<>(2 * 1024 * 1024);
+        for (int l : resultMap.keySet()) {
+            if (l >= hi || l <= lo) {
+                continue;
+            }
+            pkList.add(l);
         }
-
-//            pkList.addAll(resultMap.keySet());
-//        for (int l : resultMap.keySet()) {
-//            if (l >= hi || l <= lo) {
-//                continue;
-//            }
-//            pkList.add(l);
-//        }
-//        Collections.sort(pkList);
-//        logger.info("pkList size: " + pkList.size());
-
+        Collections.sort(pkList);
+        logger.info("pkList size: " + pkList.size());
 
 
 //        //单线程版
@@ -402,8 +372,7 @@ public class FileParser8 {
 
 
         //多线程版
-//        int size = pkList.size();
-        int size = pkList.length;
+        int size = pkList.size();
         int par = size / THREAD_NUM;
         LinkedList<Future<byte[]>> bufList = new LinkedList<>();
 
@@ -449,43 +418,34 @@ public class FileParser8 {
 
     private class WriteResult implements Callable<byte[]> {
 //        private ConcurrentHashMap<Integer, byte[]> resultMap;
-//        private ArrayList<Integer> pkList;
-        private int[] pkList;
+        private ArrayList<Integer> pkList;
         private int start;
         private int lim;
-        private HashIntObjMap<byte[]> resultMap;
+//        private HashIntObjMap<byte[]> resultMap;
+        private ConcurrentHashMap<Integer,byte[]> resultMap;
 
-//        public WriteResult(ConcurrentHashMap<Integer, byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
-//            this.resultMap = resultMap;
-//            this.pkList = pkList;
-//            this.start = start;
-//            this.lim = lim;
-//        }
+        public WriteResult(ConcurrentHashMap<Integer, byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
+            this.resultMap = resultMap;
+            this.pkList = pkList;
+            this.start = start;
+            this.lim = lim;
+        }
 //        public WriteResult(HashIntObjMap<byte[]> resultMap, ArrayList<Integer> pkList, int start, int lim) {
 //            this.resultMap = resultMap;
 //            this.pkList = pkList;
 //            this.start = start;
 //            this.lim = lim;
 //        }
-        public WriteResult(HashIntObjMap<byte[]> resultMap, int[] pkList, int start, int lim) {
-            this.resultMap = resultMap;
-            this.pkList = pkList;
-            this.start = start;
-            this.lim = lim;
-        }
 
         @Override
         public byte[] call() throws Exception {
 
 //            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF / THREAD_NUM);
-            byte[] data = new byte[RESULT_BUF];
+            byte[] data = new byte[RESULT_BUF / THREAD_NUM];
             int index = 0;
 
             for (int j = start; j < lim; j++) {
-                int pk = pkList[j];
-                if(!resultMap.containsKey(pk)){
-                    continue;
-                }
+                int pk = pkList.get(j);
                 byte[] record = resultMap.get(pk);
 //                buf.writeBytes(String.valueOf(pk).getBytes());
 
@@ -520,3 +480,4 @@ public class FileParser8 {
 
 
 }
+*/
