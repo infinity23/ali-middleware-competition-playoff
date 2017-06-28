@@ -13,6 +13,10 @@ interface Cons {
 
     byte CHAR_D = 68;
 
+    byte CHAR_TABLE = 9;
+
+    byte CHAR_ENTER = 10;
+
 
     //实际长度|VAL_LEN
 

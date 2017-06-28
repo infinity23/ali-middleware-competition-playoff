@@ -1,11 +1,14 @@
 package com.alibaba.middleware.race.sync;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 
 /**
@@ -19,6 +22,21 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
     private int end;
     private Channel channel;
     private FileChannel fileChannel;
+
+    public ServerDemoInHandler(String schema, String table, int start, int end) {
+        this.schema = schema;
+        this.table = table;
+        this.start = start;
+        this.end = end;
+
+//        try {
+//            RandomAccessFile randomAccessFile = new RandomAccessFile(MIDDLE_HOME + "insert", "rw");
+//            fileChannel = randomAccessFile.getChannel();
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        }
+
+    }
 
 
     /**
@@ -61,7 +79,6 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 //        future.addListener(ChannelFutureListener.CLOSE);
 //
 //    }
-
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         Logger logger = LoggerFactory.getLogger(Server.class);
@@ -71,7 +88,79 @@ public class ServerDemoInHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        Server.channel = ctx.channel();
+//        Server.channel = ctx.channel();
+        writeTest(ctx);
+    }
+
+    public void writeTest(ChannelHandlerContext ctx) {
+        try {
+
+            RandomAccessFile randomAccessFile = new RandomAccessFile("D:\\IncrementalSync\\example\\1.txt", "r");
+            byte[] data = new byte[(int) randomAccessFile.length()];
+            System.out.println("size : " + data.length);
+            randomAccessFile.read(data);
+//            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(150 * 1024 * 1024);
+//            buf.writeBytes(data);
+
+
+
+
+//            ByteArrayOutputStream out = new ByteArrayOutputStream();
+//
+//            BlockLZ4CompressorOutputStream lzOut = new BlockLZ4CompressorOutputStream(out);
+//            lzOut.write(data,0,data.length);
+//
+//            lzOut.close();
+//
+//            System.out.println(start);
+//            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(150 * 1024 * 1024);
+//
+//            buf.writeBytes(out.toByteArray());
+//            final long[] end = new long[1];
+//            ChannelFuture future = Server.channel.writeAndFlush(buf);
+
+
+
+
+            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(data.length);
+            buf.writeBytes(data);
+
+            final long start = System.currentTimeMillis();
+            System.out.println(start);
+
+            ChannelFuture future = ctx.writeAndFlush(buf);
+
+
+
+
+//            LZ4Compressor compressor = LZ4Factory.fastestInstance().fastCompressor();
+//            byte[] val = compressor.compress(data);
+//            ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(val.length);
+//            buf.writeBytes(val);
+//            ChannelFuture future = ctx.writeAndFlush(buf);
+
+            final long[] end = new long[1];
+            future.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                    end[0] = System.currentTimeMillis();
+                    System.out.println("cost time: " + (end[0] - start));
+//                    channelFuture.channel().close();
+                }
+            });
+
+
+//            long start = System.currentTimeMillis();
+//            System.out.println(start);
+//            Server.channel.writeAndFlush(buf);
+//                ChannelFuture future = channel.writeAndFlush(buf);
+//                future.addListener(ChannelFutureListener.CLOSE);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

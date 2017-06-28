@@ -4,8 +4,6 @@ import com.koloboke.collect.map.hash.HashIntObjMap;
 import com.koloboke.collect.map.hash.HashIntObjMaps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +33,7 @@ public class FileParser2 {
     private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
     private char lastOperation;
     private boolean pkChangeStart;
+    private boolean pkFlag;
 
 
     public FileParser2() {
@@ -58,10 +57,7 @@ public class FileParser2 {
 
                 char operation = parseOperation(mappedByteBuffer);
 
-                if(pkChangeStart && lastOperation != operation){
-                    logger.info("PKChange end: " + lastOperation + " to " + operation + " position: " + position + " fileName "+fileName);
-                    pkChangeStart = false;
-                }
+                pkFlag = false;
 
 
                 if (operation == 'I') {
@@ -79,8 +75,8 @@ public class FileParser2 {
 
                     //处理主键变更
                     if (pk != newPK) {
-
-                        if (lastOperation != operation) {
+                        pkFlag = true;
+                        if (!pkChangeStart) {
                             logger.info("PKChange start: " + lastOperation + " to " + operation + " position: " + position + " fileName "+fileName);
                             pkChangeStart = true;
                         }
@@ -99,6 +95,12 @@ public class FileParser2 {
                     skipNBytes(mappedByteBuffer, SUFFIX);
                     seekForEN(mappedByteBuffer);
                 }
+
+                if(pkChangeStart && !pkFlag){
+                    logger.info("PKChange end: " + lastOperation + " to " + operation + " position: " + position + " fileName "+fileName);
+                    pkChangeStart = false;
+                }
+
 
                 lastOperation = operation;
 
@@ -292,8 +294,8 @@ public class FileParser2 {
         //log
 //        logger.info("result 大小： " + buf.readableBytes());
 
-        ChannelFuture future = Server.channel.writeAndFlush(buf);
-        future.addListener(ChannelFutureListener.CLOSE);
+//        ChannelFuture future = Server.channel.writeAndFlush(buf);
+//        future.addListener(ChannelFutureListener.CLOSE);
 
 
     }

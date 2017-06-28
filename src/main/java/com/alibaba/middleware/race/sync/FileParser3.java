@@ -2,8 +2,6 @@ package com.alibaba.middleware.race.sync;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -398,15 +396,15 @@ public class FileParser3 {
             Collections.sort(pks);
 
             for (Integer pk : pks) {
-                Server.channel.write(resultMap.get(pk));
+//                Server.channel.write(resultMap.get(pk));
                 buf.writeBytes(resultMap.get(pk));
             }
 
             //log
             logger.info("result 大小： " + buf.readableBytes());
 
-            ChannelFuture future = Server.channel.writeAndFlush(buf);
-            future.addListener(ChannelFutureListener.CLOSE);
+//            ChannelFuture future = Server.channel.writeAndFlush(buf);
+//            future.addListener(ChannelFutureListener.CLOSE);
 
             randomAccessFile.close();
         } catch (IOException e) {

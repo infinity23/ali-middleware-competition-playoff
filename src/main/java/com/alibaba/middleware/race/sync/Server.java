@@ -1,43 +1,29 @@
 package com.alibaba.middleware.race.sync;
 
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+import static com.alibaba.middleware.race.sync.Constants.SERVER_PORT;
+
 public class Server {
-    private static String schema;
-    private static String table;
-    private static int start;
-    private static int end;
-    public static Channel channel;
 
+    public static Socket client;
+    public static BufferedOutputStream output;
 
+    private static Logger logger;
 
-    // 保存channel
-//    private static Map<String, Channel> map = new ConcurrentHashMap<String, Channel>();
-//    // 接收评测程序的三个参数
-//    private static String schema;
-//    private static Map tableNamePkMap;
+    public static void main(String[] args) {
 
-//    public static Map<String, Channel> getMap() {
-//        return map;
-//    }
-//
-//    public static void setMap(Map<String, Channel> map) {
-//        Server.map = map;
-//    }
-
-
-    public static void main(String[] args) throws InterruptedException {
         initProperties();
 
         new Thread(new Runnable() {
             private Logger logger = LoggerFactory.getLogger(Server.class);
+
             @Override
             public void run() {
                 long parseStart = System.currentTimeMillis();
@@ -54,114 +40,127 @@ public class Server {
         }).start();
 
 
-
+        System.out.println("服务器启动...\n");
         Server server = new Server();
-//        logger.info("netty.Server is running....");
-        server.startServer(5527);
-
-
+        server.init();
     }
 
-    /**
-     * 打印赛题输入 赛题输入格式： schemaName tableName startPkId endPkId，例如输入： middleware student 100 200
-     * 上面表示，查询的schema为middleware，查询的表为student,主键的查询范围是(100,200)，注意是开区间 对应DB的SQL为： select * from middleware.student where
-     * id>100 and id<200
-     */
-//    private static void printInput(String[] args) {
-//
-//
-//        // 第一个参数是Schema Name
-//        logger.info("Schema:" + args[0]);
-//        // 第二个参数是Schema Name
-//        logger.info("table:" + args[1]);
-//        // 第三个参数是start pk Id
-//        logger.info("start:" + args[2]);
-//        // 第四个参数是end pk Id
-//        logger.info("end:" + args[3]);
-//
-//    }
-
-    /**
-     * 初始化系统属性
-     */
     private static void initProperties() {
         System.setProperty("middleware.test.home", Constants.TESTER_HOME);
         System.setProperty("middleware.teamcode", Constants.TEAMCODE);
         System.setProperty("app.logging.level", Constants.LOG_LEVEL);
         System.setProperty("log.name", "server-custom");
+
+        logger = LoggerFactory.getLogger(Server.class);
     }
 
 
-    private void startServer(int port) throws InterruptedException {
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+    public void init() {
         try {
-            ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-
-                    .option(ChannelOption.SO_BACKLOG,1024)
-                    .option(ChannelOption.SO_REUSEADDR, true)
-//                    .option(ChannelOption.SO_TIMEOUT, 6000)
-                    .childOption(ChannelOption.SO_KEEPALIVE, true)
-                    .childOption(ChannelOption.TCP_NODELAY, true)
-                    .childOption(ChannelOption.SO_SNDBUF, 256 * 1024)
-                    .childOption(ChannelOption.SO_RCVBUF, 256 * 1024)
-                    .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
-                            // 注册handler
-                            ch.pipeline().addLast(new ServerDemoInHandler());
-                            // ch.pipeline().addLast(new ServerDemoOutHandler());
-                        }
-                    });
-//                    .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(1024 * 1024 * 500,1024 * 1024 * 500))
-
-            ChannelFuture f = b.bind(port).sync();
-
-
-
-//            writeFile();
-            f.channel().closeFuture().sync();
-
-        } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
+            serverSocket.setReceiveBufferSize(128 * 1024);
+            while (true) {
+                // 一旦有堵塞, 则表示服务器与客户端获得了连接
+                client = serverSocket.accept();
+                output = new BufferedOutputStream(client.getOutputStream());
+                logger.info("client connected...");
+                // 处理这次连接
+//                    new HandlerThread(client);
+            }
+        } catch (Exception e) {
+            System.out.println("服务器异常: " + e.getMessage());
         }
     }
 
+
     private static void parseFile() {
 
-//        FileParser2 fileParser = new FileParser2();
-//
-//        for (int i = 1; i <= 10; i++) {
-//            fileParser.readPage((byte) i);
-//            logger.info("fileParser has read " + i);
-//        }
-//
-//        logger.info("start showResult...");
-//        fileParser.showResult();
-//        logger.info("file has been written to " + Constants.MIDDLE_HOME + RESULT_FILE_NAME);
+        /*FileParser2 fileParser = new FileParser2();
+        Logger logger = LoggerFactory.getLogger(Server.class);
+
+        for (int i = 1; i <= 10; i++) {
+            fileParser.readPage((byte) i);
+            logger.info("fileParser has read " + i);
+        }
+
+        logger.info("start showResult...");
+        fileParser.showResult();*/
 
 
         FileParser8 fileParser = new FileParser8();
         fileParser.readPages();
     }
 
-//    private void writeFile(){
-//        try {
-//            String fileName = Constants.MIDDLE_HOME + RESULT_FILE_NAME;
-//            RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
-//            FileChannel fileChannel = randomAccessFile.getChannel();
-//            FileRegion fileRegion = new DefaultFileRegion(fileChannel, 0, fileChannel.size());
+
+    public static void writeToClient(byte[] data) {
+
+        try {
+            logger.info("write start : " + System.currentTimeMillis());
+            logger.info("result size : " + data.length);
+            output.write(data);
+            output.flush();
+            output.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+//    private class HandlerThread implements Runnable {
+//        private Socket socket;
+//        public HandlerThread(Socket client) {
+//            socket = client;
+//            try {
+//                socket.setTcpNoDelay(true);
+//                socket.setSendBufferSize(128 * 1024);
+//                socket.setPerformancePreferences(0,0,2);
 //
-//            final ChannelFuture future2 = channel.writeAndFlush(fileRegion);
-//            future2.addListener(ChannelFutureListener.CLOSE);
-//        }catch (IOException e){
-//            logger.error("writeFile error",e);
+//            } catch (SocketException e) {
+//                e.printStackTrace();
+//            }
+//            new Thread(this).start();
+//        }
+//
+//        public void run() {
+//            try {
+//
+//
+//                RandomAccessFile randomAccessFile = new RandomAccessFile("E:\\Major\\IncrementalSync\\example\\1.txt","r");
+//                byte[] data = new byte[147892188];
+//                randomAccessFile.read(data);
+//
+//
+//                long start = System.currentTimeMillis();
+//                System.out.println(start);
+//                BufferedOutputStream output = new BufferedOutputStream(socket.getOutputStream());
+//
+//                output.write(data);
+//                output.flush();
+//                output.close();
+//
+//            } catch (Exception e) {
+//                System.out.println("服务器 run 异常: " + e.getMessage());
+//            } finally {
+//                if (socket != null) {
+//                    try {
+//                        socket.close();
+//                    } catch (Exception e) {
+//                        socket = null;
+//                        System.out.println("服务端 finally 异常:" + e.getMessage());
+//                    }
+//                }
+//            }
 //        }
 //    }
 
+
 }
+
+
+
+
+
+
+

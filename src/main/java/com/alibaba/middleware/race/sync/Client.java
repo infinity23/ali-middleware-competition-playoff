@@ -1,97 +1,76 @@
 package com.alibaba.middleware.race.sync;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.concurrent.TimeUnit;
+
+import static com.alibaba.middleware.race.sync.Constants.*;
 
 public class Client {
+    private static final int TIME_OUT = 30000;
 
-    private final static int port = Constants.SERVER_PORT;
-    // idle时间
-    private static String ip;
-//    private EventLoopGroup loop = new NioEventLoopGroup();
-    private static Logger logger = LoggerFactory.getLogger(Client.class);
+    public static void main(String[] args) {
 
-
-    public static void main(String[] args) throws Exception {
-        initProperties();
-        // 从args获取server端的ip
-        ip = args[0];
-        Client client = new Client();
-        client.connect(ip, port);
-        logger.info("关闭连接");
-
-    }
-
-    /**
-     * 初始化系统属性
-     */
-    private static void initProperties() {
-        System.setProperty("middleware.test.home", Constants.TESTER_HOME);
-        System.setProperty("middleware.teamcode", Constants.TEAMCODE);
-        System.setProperty("app.logging.level", Constants.LOG_LEVEL);
-        System.setProperty("log.name", "client-custom");
-    }
-
-    /**
-     * 连接服务端
-     *
-     * @param host
-     * @param port
-     * @throws Exception
-     */
-    public void connect(String host, int port) throws Exception {
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        Socket socket = null;
         try {
-            Bootstrap b = new Bootstrap();
-            b.group(workerGroup);
-            b.channel(NioSocketChannel.class);
-            b.option(ChannelOption.TCP_NODELAY, true)
-                    .option(ChannelOption.SO_KEEPALIVE, false)
-                    .option(ChannelOption.SO_SNDBUF, 256 * 1024)
-                    .option(ChannelOption.SO_RCVBUF, 256 * 1024);
-//                                .option(ChannelOption.RCVBUF_ALLOCATOR, new DefaultMaxBytesRecvByteBufAllocator());
-//                                .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(40 * 1024 * 1024));
+            System.out.println("客户端启动...");
+            socket = new Socket();
+            socket.setReceiveBufferSize(128 * 1024);
+            socket.setTcpNoDelay(true);
+            socket.setPerformancePreferences(0, 0, 2);
+            InetSocketAddress address = new InetSocketAddress(args[0], SERVER_PORT);
+            //创建一个流套接字并将其连接到指定主机上的指定端口号
 
-            b.handler(new ChannelInitializer<SocketChannel>() {
+            TimeUnit.SECONDS.sleep(3);
+            socket.connect(address);
 
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-//                    ch.pipeline().addLast(new IdleStateHandler(10, 0, 0));
-//                    ch.pipeline().addLast(new ClientIdleEventHandler());
-//                    ch.pipeline().addLast("decoder", new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024,0,4,0,4));
-                    ch.pipeline().addLast(new ClientDemoInHandler());
-                }
-            });
+            //读取服务器端数据
+            InputStream input = socket.getInputStream();
 
-            // Start the client.
-            ChannelFuture f = null;
-            while(true) {
+            RandomAccessFile randomAccessFile = new RandomAccessFile(RESULT_HOME + RESULT_FILE_NAME, "rw");
+
+//            FileOutputStream fileOutputStream = new FileOutputStream("E:\\Major\\IncrementalSync\\example\\result\\1.txt");
+////                fileOutputStream.write(data);
+//
+            byte[] buf = new byte[128 * 1024];
+            int len;
+            while ((len = input.read(buf)) > 0) {
+                randomAccessFile.write(buf, 0, len);
+//                    System.out.println(len);
+            }
+
+//                byte[] buf = new byte[1024];
+//                while(input.read(buf) != -1){
+//                    fileOutputStream.write(buf);
+//                }
+
+//                byte[] buf = new byte[1024];
+//                while(input.read(buf) > 0){
+//                    randomAccessFile.write(buf);
+//                }
+
+            input.close();
+            randomAccessFile.close();
+//                fileOutputStream.close();
+            long end = System.currentTimeMillis();
+            System.out.println(end);
+            System.exit(0);
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (socket != null) {
                 try {
-                    f = b.connect(host, port).sync();
-                    break;
-                }catch (Exception e){
+                    socket.close();
+                } catch (IOException e) {
+                    socket = null;
+                    System.out.println("客户端 finally 异常:" + e.getMessage());
                 }
             }
-            // Wait until the connection is closed.
-            f.channel().closeFuture().sync();
-
-        } finally {
-            workerGroup.shutdownGracefully();
         }
-
-
-
-
-
     }
-
-
 }

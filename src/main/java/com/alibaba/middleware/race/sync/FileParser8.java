@@ -346,7 +346,6 @@ public class FileParser8 {
         logger.info("pkList size: " + pkList.size());
 
 
-
 //        //单线程版
 //        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
 //        int size = pkList.size();
@@ -384,28 +383,28 @@ public class FileParser8 {
         }
         bufList.add(executorService.submit(new WriteResult(resultMap, pkList, par * (THREAD_NUM - 1), size)));
 
-//        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
 
-        int resultSize = 0;
+        ByteBuf buf = ByteBufAllocator.DEFAULT.heapBuffer(RESULT_BUF);
+
         while (!bufList.isEmpty()) {
             try {
                 ByteBuf byteBuf = bufList.poll().get();
-//                buf.writeBytes(byteBuf);
-
-                Server.channel.write(byteBuf);
-                resultSize += byteBuf.readableBytes();
-
+                buf.writeBytes(byteBuf);
 
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
             }
         }
 
+        byte[] data = new byte[buf.readableBytes()];
+        buf.readBytes(data);
 
-        Server.channel.flush();
+        Server.writeToClient(data);
+
+//        Server.channel.flush();
 
 //        logger.info("result 大小： " + buf.readableBytes());
-        logger.info("result 大小： " + resultSize);
+//        logger.info("result 大小： " + resultSize);
 
 //        ChannelFuture future = Server.channel.writeAndFlush(buf);
 //        future.addListener(ChannelFutureListener.CLOSE);
@@ -443,7 +442,7 @@ public class FileParser8 {
                 byte[] record = resultMap.get(pk);
                 buf.writeBytes(String.valueOf(pk).getBytes());
                 for (int i = 0; i < KEY_NUM; i++) {
-                    buf.writeByte('\t');
+                    buf.writeByte(CHAR_TABLE);
                     int offset = VAL_OFFSET_ARRAY[i];
                     int len = VAL_LEN_ARRAY[i];
                     byte b;
@@ -452,7 +451,7 @@ public class FileParser8 {
                         buf.writeByte(b);
                     }
                 }
-                buf.writeByte('\n');
+                buf.writeByte(CHAR_ENTER);
             }
 
             return buf;

@@ -102,6 +102,8 @@ public class Task2 implements Callable<Result>{
                             PKChangeMap.put(pk,newPK);
                         }
 
+
+
                         //pk未命中
                     }else{
                         //已删
@@ -110,7 +112,6 @@ public class Task2 implements Callable<Result>{
                             continue;
                         }
 
-                        //PKchange未发生，入缓存
                         if(pk != newPK){
 
                         }

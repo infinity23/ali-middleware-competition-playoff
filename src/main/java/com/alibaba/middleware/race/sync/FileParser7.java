@@ -1,3 +1,4 @@
+package com.alibaba.middleware.race.sync;/*
 package com.alibaba.middleware.race.sync;
 
 import com.koloboke.collect.map.hash.HashIntObjMap;
@@ -12,10 +13,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static com.alibaba.middleware.race.sync.Cons.VAL_LEN_ARRAY;
@@ -36,7 +34,8 @@ public class FileParser7 {
     //        private HashMap<Integer, byte[]> resultMap = new HashMap<>();
 //    private KMap<Long, byte[]> resultMap = KMap.withExpectedSize();
 //    private HashIntObjMap<byte[]> resultMap = HashIntObjMaps.newMutableMap(5000000);
-        private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
+//        private ConcurrentHashMap<Integer,byte[]> resultMap = new ConcurrentHashMap<>(8 * 1024 * 1024);
+        private HashMap<Integer,byte[]> resultMap = new HashMap<>(8 * 1024 * 1024);
 
     public FileParser7() {
         System.getProperties().put("file.encoding", "UTF-8");
@@ -286,3 +285,4 @@ public class FileParser7 {
 
 
 }
+*/
